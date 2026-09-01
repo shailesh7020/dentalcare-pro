@@ -1,0 +1,24 @@
+# 🦷 DentalCare Pro
+
+Modern AI Ready Dental Clinic Management Platform
+
+## Tech Stack
+
+- Next.js
+- Express
+- PostgreSQL
+- Prisma
+- Tailwind CSS
+- TypeScript
+
+## Modules
+
+- Authentication
+- Dashboard
+- Patient Management
+- Appointment Management
+- Treatment Records
+- Billing
+- Reports
+- Inventory
+
