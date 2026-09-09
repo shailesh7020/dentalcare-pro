@@ -683,20 +683,26 @@ export default function InvoiceDetailPage({
 
       {/* RECORD PAYMENT MODAL */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div
+          className="fixed inset-0 bg-slate-950/75 flex items-center justify-center p-4 z-50 animate-in fade-in duration-150"
+          onClick={() => setShowPaymentModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                   Record Payment
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Invoice #{invoice.invoice_number} • Remaining Due: ₹{invoice.balance_due.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </p>
               </div>
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -817,20 +823,26 @@ export default function InvoiceDetailPage({
 
       {/* REFUND MODAL */}
       {selectedPaymentForRefund && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div
+          className="fixed inset-0 bg-slate-950/75 flex items-center justify-center p-4 z-50 animate-in fade-in duration-150"
+          onClick={() => setSelectedPaymentForRefund(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                   Process Payment Refund
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Receipt #{selectedPaymentForRefund.receipt_number} • Max Refund: ₹{selectedPaymentForRefund.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedPaymentForRefund(null)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -907,20 +919,26 @@ export default function InvoiceDetailPage({
 
       {/* CANCEL INVOICE MODAL */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div
+          className="fixed inset-0 bg-slate-950/75 flex items-center justify-center p-4 z-50 animate-in fade-in duration-150"
+          onClick={() => setShowCancelModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                   Cancel Invoice
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Invoice #{invoice.invoice_number}
                 </p>
               </div>
               <button
                 onClick={() => setShowCancelModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold cursor-pointer"
               >
                 ✕
               </button>

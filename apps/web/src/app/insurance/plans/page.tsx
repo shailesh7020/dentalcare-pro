@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ListTree,
@@ -22,6 +22,17 @@ export default function InsurancePlansPage() {
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
   const [selectedPlanForRules, setSelectedPlanForRules] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isPlanModalOpen) setIsPlanModalOpen(false);
+        if (isRuleModalOpen) setIsRuleModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPlanModalOpen, isRuleModalOpen]);
 
   // New Plan State
   const [planName, setPlanName] = useState("");
@@ -294,94 +305,99 @@ export default function InsurancePlansPage() {
 
         {/* Modal: Create Plan */}
         {isPlanModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Add Plan for Selected Payer</h3>
-                <button onClick={() => setIsPlanModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsPlanModalOpen(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Add Plan for Selected Payer</h3>
+                <button onClick={() => setIsPlanModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Plan Name *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Plan Name *</label>
                     <input
                       type="text"
                       placeholder="e.g. Comprehensive Dental PPO"
                       value={planName}
                       onChange={(e) => setPlanName(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Plan Code *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Plan Code *</label>
                     <input
                       type="text"
                       placeholder="e.g. PPO-GOLD"
                       value={planCode}
                       onChange={(e) => setPlanCode(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Coverage Rate (%) *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Coverage Rate (%) *</label>
                     <input
                       type="number"
                       value={coveragePercentage}
                       onChange={(e) => setCoveragePercentage(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Annual Limit (₹)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Annual Limit (₹)</label>
                     <input
                       type="number"
                       value={annualLimit}
                       onChange={(e) => setAnnualLimit(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Deductible (₹)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Deductible (₹)</label>
                     <input
                       type="number"
                       value={deductible}
                       onChange={(e) => setDeductible(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Fixed Co-pay (₹)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fixed Co-pay (₹)</label>
                     <input
                       type="number"
                       value={copayFixed}
                       onChange={(e) => setCopayFixed(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Pre-Auth Above (₹)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Pre-Auth Above (₹)</label>
                     <input
                       type="number"
                       value={preauthAbove}
                       onChange={(e) => setPreauthAbove(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   onClick={() => setIsPlanModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-md"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => createPlanMutation.mutate()}
                   disabled={!planName || !planCode || createPlanMutation.isPending}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm disabled:opacity-50 cursor-pointer transition-colors"
                 >
                   {createPlanMutation.isPending ? "Creating..." : "Save Plan"}
                 </button>
@@ -392,42 +408,47 @@ export default function InsurancePlansPage() {
 
         {/* Modal: Add Coverage Rule */}
         {isRuleModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Add Procedure Coverage Rule</h3>
-                <button onClick={() => setIsRuleModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsRuleModalOpen(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Add Procedure Coverage Rule</h3>
+                <button onClick={() => setIsRuleModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">CDT Procedure Code *</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">CDT Procedure Code *</label>
                   <input
                     type="text"
                     placeholder="e.g. D3330 (Molar Root Canal)"
                     value={ruleCode}
                     onChange={(e) => setRuleCode(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase"
+                    className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Category</label>
                   <input
                     type="text"
                     placeholder="Endodontics / Restorative / Surgical"
                     value={ruleCategory}
                     onChange={(e) => setRuleCategory(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
                     <select
                       value={ruleStatus}
                       onChange={(e) => setRuleStatus(e.target.value as any)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 bg-white"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded-md p-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >
                       <option value="COVERED">Covered</option>
                       <option value="PARTIALLY_COVERED">Partially Covered</option>
@@ -436,12 +457,12 @@ export default function InsurancePlansPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Coverage (%)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Coverage (%)</label>
                     <input
                       type="number"
                       value={rulePercentage}
                       onChange={(e) => setRulePercentage(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                 </div>
@@ -453,22 +474,22 @@ export default function InsurancePlansPage() {
                     onChange={(e) => setRuleRequiresPreauth(e.target.checked)}
                     className="rounded text-teal-600 focus:ring-teal-500"
                   />
-                  <label htmlFor="reqPreauth" className="text-xs font-medium text-slate-700">
+                  <label htmlFor="reqPreauth" className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     Mandatory Pre-Authorization prior to service
                   </label>
                 </div>
               </div>
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   onClick={() => setIsRuleModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-md"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => createRuleMutation.mutate()}
                   disabled={!ruleCode || createRuleMutation.isPending}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm disabled:opacity-50 cursor-pointer transition-colors"
                 >
                   {createRuleMutation.isPending ? "Saving..." : "Save Rule"}
                 </button>

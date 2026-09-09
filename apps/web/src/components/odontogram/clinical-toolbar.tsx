@@ -67,15 +67,15 @@ export function ClinicalToolbar({
   ];
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
       {/* Left: Quick Diagnoses & Procedures */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1">
           Clinical Tools:
         </span>
 
         {/* Diagnoses */}
-        <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-md border border-slate-200">
+        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 p-1 rounded-md border border-slate-200 dark:border-slate-700">
           {CONDITIONS.map((cond) => {
             const isActive =
               activeAction?.category === "CONDITION" && activeAction.code === cond.code;
@@ -97,8 +97,8 @@ export function ClinicalToolbar({
                 }
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
                   isActive
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "hover:bg-slate-200 text-slate-700"
+                    ? "bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white shadow-xs"
+                    : "hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
                 }`}
               >
                 <span
@@ -112,7 +112,7 @@ export function ClinicalToolbar({
         </div>
 
         {/* Procedures */}
-        <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-md border border-slate-200">
+        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 p-1 rounded-md border border-slate-200 dark:border-slate-700">
           {PROCEDURES.map((proc) => {
             const isActive =
               activeAction?.category === "PROCEDURE" && activeAction.code === proc.code;
@@ -135,8 +135,8 @@ export function ClinicalToolbar({
                 }
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
                   isActive
-                    ? "bg-teal-700 text-white shadow-xs"
-                    : "hover:bg-slate-200 text-slate-700"
+                    ? "bg-teal-700 dark:bg-teal-600 text-white shadow-xs"
+                    : "hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
                 }`}
               >
                 <span
@@ -152,8 +152,8 @@ export function ClinicalToolbar({
 
       {/* Center: Surface Multi-Select Pills (when tooth is selected) */}
       {selectedTooth && (
-        <div className="flex items-center gap-1 bg-teal-50/70 p-1 rounded-md border border-teal-200">
-          <span className="text-[11px] font-bold text-teal-800 px-1.5">
+        <div className="flex items-center gap-1 bg-teal-50 dark:bg-teal-950/40 p-1 rounded-md border border-teal-200 dark:border-teal-800">
+          <span className="text-[11px] font-bold text-teal-800 dark:text-teal-300 px-1.5">
             Tooth #{selectedTooth.tooth_number} Surfaces:
           </span>
           {surfacesList.map((surf) => {
@@ -169,8 +169,8 @@ export function ClinicalToolbar({
                 }
                 className={`px-2 py-0.5 text-xs font-mono font-bold rounded transition-colors ${
                   isSelected
-                    ? "bg-teal-700 text-white shadow-xs"
-                    : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                    ? "bg-teal-700 dark:bg-teal-600 text-white shadow-xs"
+                    : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                 }`}
               >
                 {surf.code[0]}
@@ -197,7 +197,7 @@ export function ClinicalToolbar({
           <button
             type="button"
             onClick={onClearSelection}
-            className="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            className="px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
           >
             Reset
           </button>

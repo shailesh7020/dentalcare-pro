@@ -55,6 +55,16 @@ export function RoleFocusSwitcher({
     }
   }, [onModeChange]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   const selectMode = (mode: RoleFocusMode) => {
     setCurrentMode(mode);
     localStorage.setItem("dentalcare-role-focus", mode);

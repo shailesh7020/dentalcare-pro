@@ -296,37 +296,44 @@ export default function EmployeesPage() {
         </div>
 
         {/* Modal: Onboard Employee */}
+        {/* Modal: Onboard Employee */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl relative border border-slate-200">
+          <div
+            className="fixed inset-0 bg-slate-950/75 z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
+            onClick={() => setShowModal(false)}
+          >
+            <div
+              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setShowModal(false)}
-                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600"
+                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
-              <h2 className="text-lg font-bold text-slate-900 mb-4">Onboard New Team Member</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Onboard New Team Member</h2>
               <form onSubmit={handleAddEmployee} className="space-y-4 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">First Name</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">First Name</label>
                     <input
                       required
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                      className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                       placeholder="e.g. Dr. Rajesh"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Last Name</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Last Name</label>
                     <input
                       required
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                      className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                       placeholder="e.g. Sharma"
                     />
                   </div>
@@ -334,23 +341,23 @@ export default function EmployeesPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Email</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Email</label>
                     <input
                       required
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                      className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                       placeholder="doctor@dentalcare.com"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Badge Code</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Badge Code</label>
                     <input
                       type="text"
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                      className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                       placeholder="EMP-1006"
                     />
                   </div>
@@ -358,22 +365,22 @@ export default function EmployeesPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Designation</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Designation</label>
                     <input
                       required
                       type="text"
                       value={designation}
                       onChange={(e) => setDesignation(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                      className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                       placeholder="e.g. Associate Periodontist"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Specialty</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Specialty</label>
                     <select
                       value={specialization}
                       onChange={(e) => setSpecialization(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                      className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                     >
                       <option value="General Dentistry">General Dentistry</option>
                       <option value="Orthodontics">Orthodontics</option>
@@ -388,23 +395,23 @@ export default function EmployeesPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Dental Council Reg #</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Dental Council Reg #</label>
                     <input
                       type="text"
                       value={license}
                       onChange={(e) => setLicense(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                      className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                       placeholder="e.g. DCI-MH-12345"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Monthly Base Pay (₹)</label>
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Monthly Base Pay (₹)</label>
                     <input
                       required
                       type="number"
                       value={salary}
                       onChange={(e) => setSalary(Number(e.target.value))}
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                      className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                     />
                   </div>
                 </div>
@@ -413,13 +420,13 @@ export default function EmployeesPage() {
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-50"
+                    className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold"
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold cursor-pointer"
                   >
                     Register Employee
                   </button>

@@ -58,7 +58,7 @@ export function AIAssistantDrawer({
       {isOpen && (
         <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-slate-900 border-l border-slate-700 shadow-2xl flex flex-col justify-between text-slate-100 animate-in slide-in-from-right duration-200">
           {/* Header */}
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur">
+          <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900">
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-lg">✨</span>

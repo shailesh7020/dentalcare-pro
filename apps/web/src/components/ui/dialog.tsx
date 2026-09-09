@@ -31,14 +31,21 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onOpenChange(false);
+        }
+      }}
+    >
       {title ? (
         <div
-          className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[20px] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+          className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[20px] shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden"
           role="dialog"
           aria-modal="true"
         >
-          <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
             <div>
               <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 {title}
@@ -51,13 +58,13 @@ export function Dialog({
             </div>
             <button
               onClick={() => onOpenChange(false)}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl p-1.5 transition-colors"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl p-1.5 transition-colors cursor-pointer"
               aria-label="Close dialog"
             >
               <X size={18} />
             </button>
           </div>
-          <div className="p-6">{children}</div>
+          <div className="p-6 overflow-y-auto">{children}</div>
         </div>
       ) : (
         children
@@ -77,7 +84,7 @@ export function DialogContent({
     <div
       role="dialog"
       aria-modal="true"
-      className={`relative w-full bg-white dark:bg-slate-900 rounded-[20px] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden ${
+      className={`relative w-full bg-white dark:bg-slate-900 rounded-[20px] shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[calc(100vh-2rem)] overflow-y-auto ${
         className || ""
       }`}
     >

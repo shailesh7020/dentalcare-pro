@@ -9,7 +9,7 @@ export function Card({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-xs transition-shadow duration-200 hover:shadow-sm ${className}`}
+      className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs transition-shadow duration-200 hover:shadow-sm ${className}`}
       {...props}
     >
       {children}

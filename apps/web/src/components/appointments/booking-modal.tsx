@@ -178,9 +178,9 @@ export function BookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-white rounded-xl shadow-2xl">
-        <DialogHeader className="border-b border-slate-100 pb-4">
-          <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl">
+        <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Calendar size={20} className="text-teal-600" />
             Book New Appointment
           </DialogTitle>
@@ -260,7 +260,7 @@ export function BookingModal({
                   />
                 </div>
                 {patientSearchQuery.data && patientSearchQuery.data.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+                  <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl max-h-56 overflow-y-auto">
                     {patientSearchQuery.data.map((p) => {
                       const fullName = `${p.first_name} ${p.last_name}`;
                       const alerts: string[] = [];
@@ -282,7 +282,7 @@ export function BookingModal({
                             });
                             setPatientSearch("");
                           }}
-                          className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-none flex items-center justify-between"
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 last:border-none flex items-center justify-between text-slate-800 dark:text-slate-200 cursor-pointer"
                         >
                           <div>
                             <span className="font-semibold text-slate-800">{fullName}</span>

@@ -159,10 +159,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const [focusMode, setFocusMode] = useState<RoleFocusMode>("all");
 
-  // Close mobile sidebar on route change
+  // Close mobile sidebar on route change or Escape
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mobileOpen) {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileOpen]);
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased selection:bg-blue-500 selection:text-white">
@@ -321,7 +331,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
+            className="fixed inset-0 bg-slate-950/75"
             onClick={() => setMobileOpen(false)}
           />
           <div className="relative w-72 bg-slate-900 text-slate-300 h-full flex flex-col p-4 shadow-2xl z-10 border-r border-slate-800">
@@ -393,7 +403,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           3. Main Workspace & Top Navigation Bar
           ---------------------------------------------------------------------- */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+        <header className="h-16 sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
           {/* Left: Mobile hamburger & Search Shortcut */}
           <div className="flex items-center gap-3 flex-1 max-w-lg">
             <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FileCheck2,
@@ -21,6 +21,17 @@ export default function PreAuthorizationsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedPreAuthId, setSelectedPreAuthId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isCreateModalOpen) setIsCreateModalOpen(false);
+        if (isUpdateModalOpen) setIsUpdateModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCreateModalOpen, isUpdateModalOpen]);
 
   // Form State
   const [patientId, setPatientId] = useState("");
@@ -178,66 +189,71 @@ export default function PreAuthorizationsPage() {
 
         {/* Modal: Create Pre-Auth */}
         {isCreateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Request Pre-Authorization</h3>
-                <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsCreateModalOpen(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Request Pre-Authorization</h3>
+                <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Patient UUID *</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Patient UUID *</label>
                   <input
                     type="text"
                     placeholder="Patient ID"
                     value={patientId}
                     onChange={(e) => setPatientId(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-md p-2"
+                    className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Policy UUID *</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Policy UUID *</label>
                   <input
                     type="text"
                     placeholder="Policy ID"
                     value={policyId}
                     onChange={(e) => setPolicyId(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-md p-2"
+                    className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Requested Coverage Amount (₹) *</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Requested Coverage Amount (₹) *</label>
                   <input
                     type="number"
                     value={requestedAmount}
                     onChange={(e) => setRequestedAmount(Number(e.target.value))}
-                    className="w-full text-xs border border-slate-300 rounded-md p-2"
+                    className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Clinical Justification & Notes</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Clinical Justification & Notes</label>
                   <textarea
                     rows={3}
                     placeholder="Describe dental diagnosis, tooth numbers, procedure necessity, and radiograph evidence..."
                     value={justification}
                     onChange={(e) => setJustification(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-md p-2"
+                    className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                   />
                 </div>
               </div>
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-md"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => createMutation.mutate()}
                   disabled={!patientId || !policyId || !requestedAmount || createMutation.isPending}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm cursor-pointer disabled:opacity-50 transition-colors"
                 >
                   {createMutation.isPending ? "Submitting..." : "Submit Pre-Auth"}
                 </button>
@@ -248,21 +264,26 @@ export default function PreAuthorizationsPage() {
 
         {/* Modal: Update Status */}
         {isUpdateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Update Pre-Authorization Status</h3>
-                <button onClick={() => setIsUpdateModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsUpdateModalOpen(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Update Pre-Authorization Status</h3>
+                <button onClick={() => setIsUpdateModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
                   <select
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value as PreAuthStatus)}
-                    className="w-full text-xs border border-slate-300 rounded-md p-2 bg-white"
+                    className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded-md p-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                   >
                     <option value="SUBMITTED">Submitted</option>
                     <option value="UNDER_REVIEW">Under Review</option>
@@ -273,51 +294,51 @@ export default function PreAuthorizationsPage() {
                 </div>
                 {newStatus === "APPROVED" && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Approved Amount (₹)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Approved Amount (₹)</label>
                     <input
                       type="number"
                       value={approvedAmount}
                       onChange={(e) => setApprovedAmount(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                 )}
                 {newStatus === "REJECTED" && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Denial Code</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Denial Code</label>
                       <input
                         type="text"
                         placeholder="e.g. CO-16"
                         value={denialCode}
                         onChange={(e) => setDenialCode(e.target.value)}
-                        className="w-full text-xs border border-slate-300 rounded-md p-2"
+                        className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Rejection Reason</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Rejection Reason</label>
                       <textarea
                         rows={2}
                         placeholder="Lack of prior radiograph or excluded procedure"
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
-                        className="w-full text-xs border border-slate-300 rounded-md p-2"
+                        className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                       />
                     </div>
                   </>
                 )}
               </div>
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   onClick={() => setIsUpdateModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-md"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => updateMutation.mutate()}
                   disabled={updateMutation.isPending}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm cursor-pointer transition-colors"
                 >
                   {updateMutation.isPending ? "Updating..." : "Confirm Update"}
                 </button>

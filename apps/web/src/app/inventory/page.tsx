@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -65,6 +65,16 @@ export default function InventoryDashboardPage() {
   const [adjustQty, setAdjustQty] = useState<number>(0);
   const [adjustReason, setAdjustReason] = useState<string>("");
   const [adjustError, setAdjustError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && adjustItem) {
+        setAdjustItem(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [adjustItem]);
 
   // 1. Fetch Dashboard Stats
   const statsQuery = useQuery({
@@ -476,8 +486,13 @@ export default function InventoryDashboardPage() {
 
       {/* Stock Adjustment Modal */}
       {adjustItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAdjustItem(null);
+          }}
+        >
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-semibold text-lg">Stock Adjustment</h3>
               <button

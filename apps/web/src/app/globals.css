@@ -112,6 +112,29 @@ body {
   outline-offset: 2px;
 }
 
+/* Accessible Solid Form Controls (Zero Transparency / High Contrast) */
+select, option {
+  background-color: var(--surface);
+  color: var(--text-primary);
+}
+
+.dark select, .dark option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+/* Sticky Solid Table Header Utility */
+.sticky-table-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--canvas);
+}
+
+.dark .sticky-table-header {
+  background-color: #1e293b;
+}
+
 /* Custom Healthcare Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

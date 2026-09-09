@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DollarSign,
   Plus,
@@ -50,6 +50,16 @@ export default function PayrollPage() {
   const [month, setMonth] = useState(9);
   const [year, setYear] = useState(2026);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showGenerateModal) {
+        setShowGenerateModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showGenerateModal]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <HRNav />
@@ -90,13 +100,13 @@ export default function PayrollPage() {
         </div>
 
         {/* Payroll Runs History */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-bold text-slate-900 text-sm">Historical Payroll Batches</h2>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs overflow-x-auto">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h2 className="font-bold text-slate-900 dark:text-slate-100 text-sm">Historical Payroll Batches</h2>
           </div>
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+              <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 uppercase tracking-wider font-semibold">
                 <th className="py-3 px-4">Batch Number</th>
                 <th className="py-3 px-4">Period</th>
                 <th className="py-3 px-4">Headcount</th>
@@ -107,25 +117,25 @@ export default function PayrollPage() {
                 <th className="py-3 px-4 text-right">Register</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {runs.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/50">
-                  <td className="py-3 px-4 font-mono font-semibold text-slate-800">{r.run_number}</td>
-                  <td className="py-3 px-4 text-slate-700 font-semibold">
+                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="py-3 px-4 font-mono font-semibold text-slate-800 dark:text-slate-200">{r.run_number}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-300 font-semibold">
                     {new Date(r.period_year, r.period_month - 1).toLocaleString("default", { month: "long" })}{" "}
                     {r.period_year}
                   </td>
-                  <td className="py-3 px-4 text-slate-700">{r.total_employees} staff</td>
-                  <td className="py-3 px-4 text-slate-900 font-medium">₹{r.total_gross.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-rose-600">₹{r.total_deductions.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-teal-800 font-bold">₹{r.total_net.toLocaleString()}</td>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-300">{r.total_employees} staff</td>
+                  <td className="py-3 px-4 text-slate-900 dark:text-slate-100 font-medium">₹{r.total_gross.toLocaleString()}</td>
+                  <td className="py-3 px-4 text-rose-600 dark:text-rose-400">₹{r.total_deductions.toLocaleString()}</td>
+                  <td className="py-3 px-4 text-teal-800 dark:text-teal-400 font-bold">₹{r.total_net.toLocaleString()}</td>
                   <td className="py-3 px-4">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
                       {r.status}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <button className="inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 font-semibold">
+                    <button className="inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 font-semibold">
                       <Download className="w-3.5 h-3.5" /> Payslips
                     </button>
                   </td>
@@ -137,25 +147,30 @@ export default function PayrollPage() {
 
         {/* Generate Modal */}
         {showGenerateModal && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200 relative">
+          <div 
+            className="fixed inset-0 bg-slate-950/75 z-50 flex items-center justify-center p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowGenerateModal(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 relative max-h-[90vh] overflow-y-auto">
               <button
                 onClick={() => setShowGenerateModal(false)}
-                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600"
+                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               >
                 <X className="w-5 h-5" />
               </button>
-              <h2 className="text-base font-bold text-slate-900 mb-2">Generate Monthly Payroll Batch</h2>
-              <p className="text-xs text-slate-500 mb-4">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Generate Monthly Payroll Batch</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
                 The engine will aggregate approved attendance hours, calculate statutory PF and tax withholding, factor in approved procedure incentives, and deduct unpaid leaves.
               </p>
               <div className="grid grid-cols-2 gap-3 text-xs mb-4">
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Month</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Month</label>
                   <select
                     value={month}
                     onChange={(e) => setMonth(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                   >
                     <option value={8}>August</option>
                     <option value={9}>September</option>
@@ -163,19 +178,19 @@ export default function PayrollPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Year</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Year</label>
                   <input
                     type="number"
                     value={year}
                     onChange={(e) => setYear(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
+                    className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg"
                   />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   onClick={() => setShowGenerateModal(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg font-semibold text-xs"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-semibold text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   Cancel
                 </button>
@@ -184,7 +199,7 @@ export default function PayrollPage() {
                     alert("Payroll batch generated successfully!");
                     setShowGenerateModal(false);
                   }}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-xs"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-xs transition-colors"
                 >
                   Calculate & Finalize Batch
                 </button>

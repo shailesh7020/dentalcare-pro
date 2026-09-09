@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   UserCheck,
@@ -24,6 +24,17 @@ export default function InsurancePoliciesPage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [selectedPolicyForVerify, setSelectedPolicyForVerify] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isAssignModalOpen) setIsAssignModalOpen(false);
+        if (isVerifyModalOpen) setIsVerifyModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAssignModalOpen, isVerifyModalOpen]);
 
   // Form State for Policy Assignment
   const [patientId, setPatientId] = useState("");
@@ -239,32 +250,37 @@ export default function InsurancePoliciesPage() {
 
         {/* Modal: Link Policy */}
         {isAssignModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Link Patient Insurance Policy</h3>
-                <button onClick={() => setIsAssignModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsAssignModalOpen(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Link Patient Insurance Policy</h3>
+                <button onClick={() => setIsAssignModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Patient UUID *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Patient UUID *</label>
                     <input
                       type="text"
                       placeholder="Paste Patient ID"
                       value={patientId}
                       onChange={(e) => setPatientId(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Payer / Carrier *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Payer / Carrier *</label>
                     <select
                       value={providerId}
                       onChange={(e) => setProviderId(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 bg-white"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded-md p-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >
                       <option value="">Select Provider</option>
                       {providers.map((p) => (
@@ -275,11 +291,11 @@ export default function InsurancePoliciesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Insurance Plan</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Insurance Plan</label>
                     <select
                       value={planId}
                       onChange={(e) => setPlanId(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 bg-white"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded-md p-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >
                       <option value="">Standard Plan</option>
                       {plans.map((pl) => (
@@ -290,31 +306,31 @@ export default function InsurancePoliciesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Policy Number *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Policy Number *</label>
                     <input
                       type="text"
                       placeholder="e.g. POL-882910"
                       value={policyNumber}
                       onChange={(e) => setPolicyNumber(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Member / ID Number *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Member / ID Number *</label>
                     <input
                       type="text"
                       placeholder="e.g. MEM-90412"
                       value={memberId}
                       onChange={(e) => setMemberId(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Priority</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Priority</label>
                     <select
                       value={priority}
                       onChange={(e) => setPriority(e.target.value as any)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 bg-white"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded-md p-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >
                       <option value="PRIMARY">Primary Coverage</option>
                       <option value="SECONDARY">Secondary</option>
@@ -322,11 +338,11 @@ export default function InsurancePoliciesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Relationship</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Relationship</label>
                     <select
                       value={relationship}
                       onChange={(e) => setRelationship(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 bg-white"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded-md p-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >
                       <option value="SELF">Self / Subscriber</option>
                       <option value="SPOUSE">Spouse</option>
@@ -335,36 +351,36 @@ export default function InsurancePoliciesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Effective Date</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Effective Date</label>
                     <input
                       type="date"
                       value={effectiveDate}
                       onChange={(e) => setEffectiveDate(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Expiry Date</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Expiry Date</label>
                     <input
                       type="date"
                       value={expiryDate}
                       onChange={(e) => setExpiryDate(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   onClick={() => setIsAssignModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-md"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => assignMutation.mutate()}
                   disabled={!patientId || !providerId || !policyNumber || !memberId || assignMutation.isPending}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm disabled:opacity-50 cursor-pointer transition-colors"
                 >
                   {assignMutation.isPending ? "Linking..." : "Link Policy"}
                 </button>
@@ -375,11 +391,16 @@ export default function InsurancePoliciesPage() {
 
         {/* Modal: Verify Policy */}
         {isVerifyModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Verify Insurance Coverage</h3>
-                <button onClick={() => setIsVerifyModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsVerifyModalOpen(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Verify Insurance Coverage</h3>
+                <button onClick={() => setIsVerifyModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -392,32 +413,32 @@ export default function InsurancePoliciesPage() {
                     onChange={(e) => setIsVerified(e.target.checked)}
                     className="rounded text-teal-600 focus:ring-teal-500"
                   />
-                  <label htmlFor="verifyCheck" className="text-xs font-medium text-slate-700">
+                  <label htmlFor="verifyCheck" className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     Confirmed active member status with payer portal / helpline
                   </label>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Verification Notes</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Verification Notes</label>
                   <textarea
                     rows={3}
                     placeholder="Verified coverage limit, remaining annual balance, and copay requirements..."
                     value={verificationNotes}
                     onChange={(e) => setVerificationNotes(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                   />
                 </div>
               </div>
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   onClick={() => setIsVerifyModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-md"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => verifyMutation.mutate()}
                   disabled={verifyMutation.isPending}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm cursor-pointer transition-colors"
                 >
                   {verifyMutation.isPending ? "Updating..." : "Confirm Verification"}
                 </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   CheckCircle2,
@@ -121,6 +121,16 @@ export default function ConsentsPage() {
   const [forms, setForms] = useState(mockPatientForms);
   const [selectedForm, setSelectedForm] = useState<PatientFormRead | null>(null);
   const [reviewNote, setReviewNote] = useState("");
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedForm) {
+        setSelectedForm(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedForm]);
 
   const handleApprove = (id: string) => {
     setForms(
@@ -378,30 +388,35 @@ export default function ConsentsPage() {
 
         {/* Modal: Review & Countersign */}
         {selectedForm && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 animate-scale-up">
-              <h3 className="text-base font-bold text-slate-900 mb-1">Doctor Review & Countersign</h3>
-              <p className="text-xs text-slate-500 mb-4">{selectedForm.template_title}</p>
+          <div 
+            className="fixed inset-0 bg-slate-950/75 flex items-center justify-center p-4 z-50 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedForm(null);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-scale-up max-h-[90vh] overflow-y-auto">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Doctor Review & Countersign</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{selectedForm.template_title}</p>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4 space-y-2 text-xs">
+              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-4 space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Patient:</span>
-                  <strong className="text-slate-800">{selectedForm.patient_name}</strong>
+                  <span className="text-slate-500 dark:text-slate-400">Patient:</span>
+                  <strong className="text-slate-800 dark:text-slate-200">{selectedForm.patient_name}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Submitted:</span>
-                  <span className="text-slate-800">{new Date(selectedForm.submitted_at || "").toLocaleString()}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Submitted:</span>
+                  <span className="text-slate-800 dark:text-slate-200">{new Date(selectedForm.submitted_at || "").toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Patient Digital Signature:</span>
-                  <span className="text-emerald-700 font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded">
+                  <span className="text-slate-500 dark:text-slate-400">Patient Digital Signature:</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-mono font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                     CAPTURED
                   </span>
                 </div>
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Doctor Clinical Review Notes
                 </label>
                 <textarea
@@ -409,20 +424,20 @@ export default function ConsentsPage() {
                   placeholder="e.g. Procedure explained, questions answered, countersigned."
                   value={reviewNote}
                   onChange={(e) => setReviewNote(e.target.value)}
-                  className="w-full p-3 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500"
+                  className="w-full p-3 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setSelectedForm(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleReject(selectedForm.id)}
-                  className="px-4 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition"
+                  className="px-4 py-2 text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-lg transition"
                 >
                   Reject Form
                 </button>

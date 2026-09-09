@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Receipt,
@@ -20,6 +20,16 @@ export default function PaymentReconciliationPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen]);
 
   // Form State
   const [claimId, setClaimId] = useState("");
@@ -170,28 +180,33 @@ export default function PaymentReconciliationPage() {
 
         {/* Modal: Post Remittance */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Post Remittance Advice (ERA)</h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsModalOpen(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Post Remittance Advice (ERA)</h3>
+                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Claim UUID *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Claim UUID *</label>
                     <input
                       type="text"
                       placeholder="Paste Claim ID"
                       value={claimId}
                       onChange={(e) => setClaimId(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Billing Invoice UUID (Optional - Auto Updates Balance)
                     </label>
                     <input
@@ -199,61 +214,61 @@ export default function PaymentReconciliationPage() {
                       placeholder="Paste Invoice ID"
                       value={invoiceId}
                       onChange={(e) => setInvoiceId(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">EFT / Cheque Ref *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">EFT / Cheque Ref *</label>
                     <input
                       type="text"
                       placeholder="e.g. EFT-2026-9921"
                       value={reference}
                       onChange={(e) => setReference(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 uppercase"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 uppercase"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Date</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Payment Date</label>
                     <input
                       type="date"
                       value={paymentDate}
                       onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Payer Settled Amount (₹) *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Payer Settled Amount (₹) *</label>
                     <input
                       type="number"
                       value={settledAmount}
                       onChange={(e) => setSettledAmount(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Patient Copay Due (₹)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Patient Copay Due (₹)</label>
                     <input
                       type="number"
                       value={patientCopayDue}
                       onChange={(e) => setPatientCopayDue(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Contractual Write-Off (₹)</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Contractual Write-Off (₹)</label>
                     <input
                       type="number"
                       value={adjustmentAmount}
                       onChange={(e) => setAdjustmentAmount(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Settlement Type</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Settlement Type</label>
                     <select
                       value={settlementType}
                       onChange={(e) => setSettlementType(e.target.value as SettlementType)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 bg-white"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded-md p-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >
                       <option value="FULL">Full Settlement</option>
                       <option value="PARTIAL">Partial Settlement</option>
@@ -263,17 +278,17 @@ export default function PaymentReconciliationPage() {
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-md"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => createMutation.mutate()}
                   disabled={!claimId || !reference || !settledAmount || createMutation.isPending}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm cursor-pointer disabled:opacity-50 transition-colors"
                 >
                   {createMutation.isPending ? "Posting..." : "Post & Sync Ledger"}
                 </button>

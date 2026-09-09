@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
@@ -25,6 +25,16 @@ export default function InsuranceProvidersPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen]);
 
   // Form State
   const [name, setName] = useState("");
@@ -239,22 +249,27 @@ export default function InsuranceProvidersPage() {
 
         {/* Create Provider Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Register Insurance Provider / TPA</h3>
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsModalOpen(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Register Insurance Provider / TPA</h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Provider / Company Name *
                     </label>
                     <input
@@ -263,12 +278,12 @@ export default function InsuranceProvidersPage() {
                       placeholder="e.g. Star Health Insurance"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Provider Code *
                     </label>
                     <input
@@ -277,16 +292,16 @@ export default function InsuranceProvidersPage() {
                       placeholder="e.g. STAR-01"
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Provider Type</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Provider Type</label>
                     <select
                       value={providerType}
                       onChange={(e) => setProviderType(e.target.value as InsuranceProviderType)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >
                       <option value="INSURANCE_COMPANY">Insurance Carrier</option>
                       <option value="TPA">TPA Administrator</option>
@@ -296,95 +311,95 @@ export default function InsuranceProvidersPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Payer ID / EDI</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Payer ID / EDI</label>
                     <input
                       type="text"
                       placeholder="e.g. 99241"
                       value={payerId}
                       onChange={(e) => setPayerId(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Managed TPA Name</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Managed TPA Name</label>
                     <input
                       type="text"
                       placeholder="e.g. Medi Assist / Vidal"
                       value={tpaName}
                       onChange={(e) => setTpaName(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Person</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Contact Person</label>
                     <input
                       type="text"
                       placeholder="Claims Desk Officer"
                       value={contactPerson}
                       onChange={(e) => setContactPerson(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Desk Phone</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Desk Phone</label>
                     <input
                       type="text"
                       placeholder="+91 22 4000 1234"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Claims Email</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Claims Email</label>
                     <input
                       type="email"
                       placeholder="claims@starhealth.in"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Provider Portal URL</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Provider Portal URL</label>
                     <input
                       type="text"
                       placeholder="https://provider.starhealth.in"
                       value={portalUrl}
                       onChange={(e) => setPortalUrl(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Notes / Instructions</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes / Instructions</label>
                     <textarea
                       rows={2}
                       placeholder="Special submission requirements or empanelment notes..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-md"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => createMutation.mutate()}
                   disabled={!name || !code || createMutation.isPending}
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-sm disabled:opacity-50 cursor-pointer transition-colors"
                 >
                   {createMutation.isPending ? "Saving..." : "Save Provider"}
                 </button>

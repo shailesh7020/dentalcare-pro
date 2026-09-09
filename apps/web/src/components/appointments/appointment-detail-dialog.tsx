@@ -143,11 +143,11 @@ export function AppointmentDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-white rounded-xl shadow-2xl">
-        <DialogHeader className="border-b border-slate-100 pb-4">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl">
+        <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="font-mono text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+              <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
                 #{appointment.appointment_number}
               </span>
               <Badge variant={statusBadgeVariant(appointment.status)} className="capitalize">
