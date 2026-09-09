@@ -26,8 +26,6 @@ jobs:
       - run: pip install ruff
       - run: ruff check backend/app backend/tests
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -54,8 +52,6 @@ jobs:
           pip install -e ".[dev]"
           pytest --cov=app --cov-fail-under=85 -v
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
