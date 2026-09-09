@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class ClinicProfileSettings(BaseModel):

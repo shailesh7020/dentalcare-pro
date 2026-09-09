@@ -4,16 +4,11 @@ import json
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-from fastapi import HTTPException
 import pytest
+from fastapi import HTTPException
 
 from app.models.identity import Clinic
 from app.models.notification import ClinicNotificationSetting
-from app.schemas.admin_settings import (
-    ClinicProfileSettings,
-    UnifiedAdminSettings,
-    WorkingHoursSettings,
-)
 from app.services.admin_settings_service import AdminSettingsService
 
 

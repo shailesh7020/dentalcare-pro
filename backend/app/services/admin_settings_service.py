@@ -63,8 +63,8 @@ class AdminSettingsService:
             try:
                 wh_data = json.loads(clinic.working_hours)
                 wh = WorkingHoursSettings(**wh_data)
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError, TypeError) as e:
+                logger.debug("Failed to parse working hours settings: %s", e)
 
         # Notifications & Reminders
         if notif_setting:

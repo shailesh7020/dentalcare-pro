@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from io import BytesIO
 from typing import Any
 
@@ -107,7 +107,6 @@ class ClinicalDocumentPDFService:
     ) -> bytes:
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
-        styles = getSampleStyleSheet()
         primary_color = colors.HexColor("#0f766e")
         slate_color = colors.HexColor("#1e293b")
 
@@ -122,7 +121,7 @@ class ClinicalDocumentPDFService:
                 clinic_phone=clinic_info.get("phone", "+91 98765 43210"),
                 clinic_email=clinic_info.get("email", "info@dentalcarepro.in"),
                 doc_title="TREATMENT PLAN ESTIMATE",
-                doc_subtitle=f"Date: {date.today().strftime('%d-%b-%Y')}",
+                doc_subtitle=f"Date: {datetime.now(UTC).date().strftime('%d-%b-%Y')}",
             )
         )
 
@@ -138,7 +137,7 @@ class ClinicalDocumentPDFService:
             ],
             [
                 Paragraph(f"<b>Plan Title:</b> <b>{plan_title}</b>", cell_style),
-                Paragraph(f"<b>Status:</b> Proposed Estimate", cell_style),
+                Paragraph("<b>Status:</b> Proposed Estimate", cell_style),
             ],
         ]
         info_table = Table(pat_data, colWidths=[261, 262])
@@ -265,8 +264,6 @@ class ClinicalDocumentPDFService:
     ) -> bytes:
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
-        styles = getSampleStyleSheet()
-        primary_color = colors.HexColor("#0f766e")
         slate_color = colors.HexColor("#1e293b")
 
         body_style = ParagraphStyle("CertBody", fontName="Helvetica", fontSize=10, leading=16, textColor=slate_color)
@@ -279,7 +276,7 @@ class ClinicalDocumentPDFService:
                 clinic_phone=clinic_info.get("phone", "+91 98765 43210"),
                 clinic_email=clinic_info.get("email", "info@dentalcarepro.in"),
                 doc_title="MEDICAL CERTIFICATE",
-                doc_subtitle=f"Cert #: {cert_no}<br/>Date: {date.today().strftime('%d-%b-%Y')}",
+                doc_subtitle=f"Cert #: {cert_no}<br/>Date: {datetime.now(UTC).date().strftime('%d-%b-%Y')}",
             )
         )
         story.append(Spacer(1, 15))
@@ -346,13 +343,10 @@ class ClinicalDocumentPDFService:
     ) -> bytes:
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
-        styles = getSampleStyleSheet()
-        primary_color = colors.HexColor("#0f766e")
         slate_color = colors.HexColor("#1e293b")
 
         cell_style = ParagraphStyle("ACell", fontName="Helvetica", fontSize=9, leading=12, textColor=slate_color)
         cell_bold = ParagraphStyle("ACellB", fontName="Helvetica-Bold", fontSize=9, leading=12, textColor=slate_color)
-        callout_time = ParagraphStyle("ATime", fontName="Helvetica-Bold", fontSize=14, leading=18, textColor=primary_color)
 
         story: list[Any] = []
         story.extend(
@@ -443,7 +437,6 @@ class ClinicalDocumentPDFService:
     ) -> bytes:
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
-        styles = getSampleStyleSheet()
         primary_color = colors.HexColor("#0f766e")
         slate_color = colors.HexColor("#1e293b")
 
@@ -457,7 +450,7 @@ class ClinicalDocumentPDFService:
                 clinic_phone=clinic_info.get("phone", "+91 98765 43210"),
                 clinic_email=clinic_info.get("email", "info@dentalcarepro.in"),
                 doc_title="INFORMED CONSENT FORM",
-                doc_subtitle=f"Date: {date.today().strftime('%d-%b-%Y')}",
+                doc_subtitle=f"Date: {datetime.now(UTC).date().strftime('%d-%b-%Y')}",
             )
         )
         story.append(Spacer(1, 8))
@@ -481,7 +474,7 @@ class ClinicalDocumentPDFService:
         story.append(Spacer(1, 20))
 
         # Signatures
-        v_hash = verification_hash or f"CONSENT-{patient_info.get('id', 'PAT')[:6]}-{datetime.now().strftime('%Y%m%d%H%M')}"
+        v_hash = verification_hash or f"CONSENT-{patient_info.get('id', 'PAT')[:6]}-{datetime.now(UTC).strftime('%Y%m%d%H%M')}"
         qr_flow = QRCodeService.generate_qr_flowable(f"DENTALCARE:CONSENT:{v_hash}", size=55)
 
         pat_sig_cell: Any = Paragraph("___________________________<br/><b>Patient / Guardian Signature</b>", body_style)
@@ -532,7 +525,6 @@ class ClinicalDocumentPDFService:
             topMargin=10,
             bottomMargin=10,
         )
-        styles = getSampleStyleSheet()
         title_style = ParagraphStyle("CardTitle", fontName="Helvetica-Bold", fontSize=11, leading=13, textColor=colors.HexColor("#0f766e"))
         sub_style = ParagraphStyle("CardSub", fontName="Helvetica", fontSize=7, leading=9, textColor=colors.HexColor("#64748b"))
         label_style = ParagraphStyle("CardLabel", fontName="Helvetica-Bold", fontSize=7.5, leading=10, textColor=colors.HexColor("#1e293b"))
@@ -583,7 +575,6 @@ class ClinicalDocumentPDFService:
             topMargin=36,
             bottomMargin=36,
         )
-        styles = getSampleStyleSheet()
         header = cls._build_header(
             clinic_info.get("name", "DENTALCARE PRO CLINIC"),
             clinic_info.get("phone", ""),

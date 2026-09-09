@@ -6,14 +6,13 @@ Executes comprehensive end-to-end testing across all 19 verification phases.
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime, time, timedelta, timezone
-import hashlib
 import json
 import os
-from pathlib import Path
 import sys
 import time as pytime
-from uuid import UUID, uuid4
+from datetime import UTC, date, datetime, time, timedelta
+from pathlib import Path
+from uuid import uuid4
 
 # Set test environment
 config_path = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "DentalCarePro" / "config.json"
@@ -45,25 +44,33 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.models.appointment import Appointment, AppointmentStatus, Chair
+from app.models.billing import (
+    Invoice,
+    InvoiceStatus,
+    Payment,
+    PaymentMethod,
+    PaymentStatus,
+)
+from app.models.commercial import (
+    BackupDestination,
+    BackupType,
+)
+from app.models.identity import Clinic, Role, User
+from app.models.inventory import (
+    InventoryItem,
+    StockTransaction,
+    StockTransactionType,
+)
+from app.models.patient import Gender, Patient
+from app.models.treatment import Treatment, TreatmentProcedure, TreatmentStatus
 from app.security.passwords import hash_password, verify_password
 from app.security.tokens import create_access_token
-from app.models.appointment import Appointment, AppointmentStatus, Chair
-from app.models.billing import Invoice, InvoiceItem, InvoiceItemType, InvoiceStatus, Payment, PaymentMethod, PaymentStatus
-from app.models.commercial import BackupDestination, BackupRecord, BackupType, ClinicianSignature, SignatureType
-from app.models.identity import Clinic, Role, User
-from app.models.inventory import InventoryBatch, InventoryItem, StockTransaction, StockTransactionType, Supplier
-from app.models.notification import ClinicNotificationSetting, Notification, NotificationPriority, NotificationType
-from app.models.patient import Gender, Patient
-from app.models.prescription import MedicineCatalog, Prescription, PrescriptionItem, PrescriptionStatus
-from app.models.treatment import Treatment, TreatmentProcedure, TreatmentStatus
 from app.services.backup_service import BackupService
-from app.services.clinical_document_pdf_service import ClinicalDocumentPDFService
-from app.services.clinical_storage_service import AntiVirusService, ClinicalStorageService
 from app.services.clinic_network_service import ClinicNetworkService
-from app.services.notifications.reminder_service import ReminderService
+from app.services.clinical_document_pdf_service import ClinicalDocumentPDFService
+from app.services.clinical_storage_service import AntiVirusService
 from app.services.qr_service import QRCodeService
-from app.services.signature_service import ClinicianSignatureService
-from app.services.update_service import UpdateService
 
 engine = create_async_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -223,7 +230,7 @@ async def validate_phase5_patient_management():
         details["qr_payload"] = qr_payload
 
         # 4. Soft Delete
-        pat.deleted_at = datetime.now(timezone.utc)
+        pat.deleted_at = datetime.now(UTC)
         await db.commit()
         res = await db.execute(select(Patient).where(Patient.id == pat.id, Patient.deleted_at.is_(None)))
         details["soft_delete_effective"] = res.scalar_one_or_none() is None
@@ -496,7 +503,7 @@ async def validate_phase11_multi_user():
         ClinicNetworkService._workstations[clinic_id][ws_id] = {
             "ws": None,
             "role": role,
-            "connected_at": datetime.now(timezone.utc),
+            "connected_at": datetime.now(UTC),
             "client_ip": "192.168.1.50",
         }
 

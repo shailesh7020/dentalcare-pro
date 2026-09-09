@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, date, datetime, time, timedelta
-from decimal import Decimal
+from datetime import UTC, date, datetime, time
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
-from fastapi import HTTPException
 import pytest
+from fastapi import HTTPException
 
 from app.models.appointment import Appointment, AppointmentStatus, Chair, ChairStatus
-from app.models.billing import Invoice, InvoiceStatus, Payment, PaymentMethod, PaymentStatus
-from app.models.identity import Clinic, Role, User
-from app.models.inventory import InventoryBatch, InventoryItem
+from app.models.identity import Role, User
 from app.models.patient import Gender, Patient
 from app.schemas.appointment import AppointmentCreate
 from app.services.appointment_service import AppointmentService

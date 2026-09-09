@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Any
+
 import qrcode
+from reportlab.graphics import renderSVG
 from reportlab.graphics.barcode import createBarcodeDrawing, qr
 from reportlab.graphics.shapes import Drawing, Group
-from reportlab.graphics import renderSVG
 from reportlab.platypus import Image as PlatypusImage
 
 

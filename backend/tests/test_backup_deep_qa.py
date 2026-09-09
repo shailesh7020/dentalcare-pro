@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime, timezone
 import hashlib
 import json
-from pathlib import Path
 import tempfile
+import zipfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
-import zipfile
 
-from cryptography.fernet import Fernet
 import pytest
+from cryptography.fernet import Fernet
 
 from app.models.commercial import BackupDestination, BackupRecord, BackupStatus, BackupType
-from app.services.backup_service import BackupService, _derive_fernet_key, get_default_backup_dir
+from app.services.backup_service import BackupService, _derive_fernet_key
 
 
 class MockAsyncDb:
@@ -92,8 +91,7 @@ async def test_create_and_verify_encrypted_backup():
             assert backup_file.exists()
 
             # Verify recorded SHA-256 matches actual file on disk
-            with open(backup_file, "rb") as f:
-                content = f.read()
+            content = backup_file.read_bytes()
             assert hashlib.sha256(content).hexdigest() == record.checksum_sha256
 
             # Verify decryption with correct password
@@ -103,8 +101,7 @@ async def test_create_and_verify_encrypted_backup():
 
             # Verify archive contents contain manifest and database.sql
             zip_tmp = dest_dir / "test_unpacked.zip"
-            with open(zip_tmp, "wb") as f:
-                f.write(raw_zip)
+            zip_tmp.write_bytes(raw_zip)
 
             with zipfile.ZipFile(zip_tmp, "r") as zf:
                 namelist = zf.namelist()
@@ -149,8 +146,7 @@ async def test_restore_backup_checksum_corruption_detection():
     with tempfile.TemporaryDirectory() as tmpdir:
         dest_dir = Path(tmpdir)
         backup_file = dest_dir / "corrupted.dcb"
-        with open(backup_file, "wb") as f:
-            f.write(b"tampered-content-not-matching-sha")
+        backup_file.write_bytes(b"tampered-content-not-matching-sha")
 
         record = BackupRecord(
             id=uuid4(),

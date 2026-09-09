@@ -6,10 +6,10 @@ Simulates 10, 25, 50, and 100 concurrent user requests to measure latency and th
 from __future__ import annotations
 
 import asyncio
+import json
 import statistics
 import time
 import urllib.request
-import json
 
 TARGET_URL = "http://127.0.0.1:8000/api/v1/health/live"
 CONCURRENCY_LEVELS = [10, 25, 50, 100]

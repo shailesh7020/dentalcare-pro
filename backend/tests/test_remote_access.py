@@ -10,19 +10,16 @@ Validates:
 - In-memory rate limiting fallback when Redis is absent
 - Remote notifications and Web Push payload formatting
 """
-import pytest
-from httpx import ASGITransport, AsyncClient
 from uuid import uuid4
 
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.dependencies.rate_limit import _in_memory_rate_limit
 from app.main import app
-from app.models.identity import Role, User
-from app.models.remote import ClinicRemoteConfig
-from app.security.passwords import hash_password
-from app.security.tokens import create_access_token
 from app.security.totp import TOTPService
 from app.services.remote_access_service import RemoteAccessService
 from app.services.remote_notification_service import RemoteNotificationService
-from app.dependencies.rate_limit import _in_memory_rate_limit
 
 
 @pytest.mark.asyncio

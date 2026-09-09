@@ -1,7 +1,7 @@
 """Create medicine_catalog, prescription_templates, prescriptions, and prescription_items tables."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "20260908_0007"
 down_revision = "20260908_0006"

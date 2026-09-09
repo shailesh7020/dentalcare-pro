@@ -10,7 +10,7 @@ import json
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.dependencies.auth import current_user, require_roles
 from app.models.identity import Role, User
-from app.models.remote import ClinicRemoteConfig, TwoFactorSecret
+from app.models.remote import TwoFactorSecret
 from app.security.passwords import verify_password
 from app.security.totp import TOTPService
 from app.services.remote_access_service import RemoteAccessService

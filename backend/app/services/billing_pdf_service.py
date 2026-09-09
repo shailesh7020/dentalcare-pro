@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -13,8 +14,6 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
-
-from typing import Any
 
 from app.schemas.billing import InvoiceDetail, PaymentDetail
 from app.services.qr_service import QRCodeService
@@ -515,7 +514,6 @@ class BillingPDFService:
             topMargin=10,
             bottomMargin=10,
         )
-        styles = getSampleStyleSheet()
 
         title_style = ParagraphStyle("TTitle", fontName="Helvetica-Bold", fontSize=10, leading=12, alignment=1)
         sub_style = ParagraphStyle("TSub", fontName="Helvetica", fontSize=7, leading=9, alignment=1, textColor=colors.HexColor("#334155"))

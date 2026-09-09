@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-import time
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 from starlette.requests import Request
 from starlette.responses import Response
 
 from app.middleware.remote_access import (
-    PROHIBITED_REMOTE_ADMIN_PATHS,
-    PROHIBITED_REMOTE_DELETE_PREFIXES,
     RemoteAccessMiddleware,
     is_private_ip,
 )

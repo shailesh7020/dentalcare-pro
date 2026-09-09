@@ -1,7 +1,7 @@
 """Create invoices, invoice_items, and payments tables."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "20260908_0008"
 down_revision = "20260908_0007"

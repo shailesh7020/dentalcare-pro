@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import io
-from pathlib import Path
 import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from fastapi import HTTPException, UploadFile
 import pytest
+from fastapi import HTTPException, UploadFile
 
-from app.models.mobile import MobileClinicalMedia
 from app.services.clinical_storage_service import (
-    ALLOWED_MIME_TYPES,
     MAX_FILE_SIZE,
     AntiVirusService,
     ClinicalStorageService,

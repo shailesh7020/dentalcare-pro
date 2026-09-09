@@ -36,4 +36,6 @@ target-version = "py313"
 ignore = ["B008", "UP046"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["DTZ005", "DTZ007", "RUF059", "S110", "BLE001", "S101"]
+"tests/*" = ["DTZ005", "DTZ007", "RUF059", "S110", "BLE001", "S101", "ASYNC230"]
+"scripts/*" = ["DTZ005", "DTZ011", "BLE001", "S110", "ASYNC210", "ASYNC230"]
+"desktop_entry.py" = ["BLE001", "G201", "PLW1508", "S110"]

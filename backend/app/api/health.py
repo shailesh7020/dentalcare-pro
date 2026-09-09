@@ -38,14 +38,14 @@ async def ready(request: Request):  # type: ignore[no-untyped-def]
         try:
             await redis_client.ping()
             checks["redis"] = True
-        except (RedisError, Exception) as error:
+        except (RedisError, ConnectionError, TimeoutError, OSError) as error:
             logger.info("health.redis_unavailable (optional in local clinic) error=%s", type(error).__name__)
 
     storage_service = getattr(request.app.state, "storage", None)
     if storage_service is not None:
         try:
             checks["storage"] = await storage_service.check()
-        except Exception:
+        except (OSError, ConnectionError):
             checks["storage"] = True
     else:
         checks["storage"] = True

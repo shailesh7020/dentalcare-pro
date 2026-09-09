@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.commercial import BackupDestination, BackupStatus, BackupType
+from pydantic import BaseModel, ConfigDict
+
+from app.models.commercial import BackupDestination, BackupType
 
 
 class BackupCreateRequest(BaseModel):

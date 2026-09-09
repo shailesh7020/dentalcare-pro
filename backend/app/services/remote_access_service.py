@@ -6,23 +6,23 @@ and aggregated mobile clinical dashboard summaries.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
 import secrets
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.appointment import Appointment, AppointmentStatus, Chair
 from app.models.billing import Invoice, InvoiceStatus
-from app.models.identity import Clinic, Role, User
+from app.models.identity import Role, User
 from app.models.inventory import InventoryItem
 from app.models.notification import Notification
 from app.models.patient import Patient
-from app.models.remote import ClinicRemoteConfig, RemoteSession, TwoFactorSecret
+from app.models.remote import ClinicRemoteConfig, RemoteSession
 
 
 class RemoteAccessService:
@@ -66,7 +66,7 @@ class RemoteAccessService:
         """Create a tracked remote session and return (session, raw_token)."""
         raw_token = secrets.token_urlsafe(48)
         token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(minutes=timeout_minutes)
 
         session = RemoteSession(
@@ -97,7 +97,7 @@ class RemoteAccessService:
             .where(
                 RemoteSession.user_id == user_id,
                 RemoteSession.revoked_at.is_(None),
-                RemoteSession.expires_at > datetime.now(timezone.utc),
+                RemoteSession.expires_at > datetime.now(UTC),
             )
             .order_by(RemoteSession.last_active_at.desc())
         )
@@ -130,7 +130,7 @@ class RemoteAccessService:
         session = res.scalar_one_or_none()
         if not session:
             return False
-        session.revoked_at = datetime.now(timezone.utc)
+        session.revoked_at = datetime.now(UTC)
         await db.commit()
         return True
 
@@ -169,7 +169,7 @@ ingress:
         cls, clinic_id: UUID, user: User, db: AsyncSession
     ) -> dict[str, Any]:
         """Aggregate high-performance mobile summary in single database round-trip."""
-        today = date.today()
+        today = datetime.now(UTC).date()
         tomorrow = today + timedelta(days=1)
         week_end = today + timedelta(days=7)
 

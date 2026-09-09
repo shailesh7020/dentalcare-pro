@@ -1,7 +1,7 @@
 """Create appointment, chair, dentist schedule, and appointment timeline tables."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql as pg
 
 revision = "20260908_0004"

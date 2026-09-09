@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
-from app.dependencies.auth import current_user, require_roles
+from app.dependencies.auth import require_roles
 from app.models.identity import Role, User
 from app.schemas.backup import (
     BackupCreateRequest,
@@ -41,10 +41,10 @@ async def create_backup(
             password=payload.password,
         )
         return BackupRecordResponse.model_validate(record)
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Backup creation failed: {str(e)}",
+            detail=f"Backup creation failed: {e!s}",
         )
 
 
@@ -80,8 +80,8 @@ async def restore_backup(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Restore error: {str(e)}")
+    except (OSError, RuntimeError) as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Restore error: {e!s}")
 
 
 @router.get("/{backup_id}/download")

@@ -1,6 +1,6 @@
 """Create Phase 1 clinic identity tables."""
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql as pg
 
 revision = "20260902_0001"

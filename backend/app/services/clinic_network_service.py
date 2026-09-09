@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import logging
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, ClassVar
 from uuid import UUID
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 logger = logging.getLogger("dentalcare.network")
 
 
 class ClinicNetworkService:
     # clinic_id -> dict of workstation_id -> {"ws": WebSocket, "role": str, "connected_at": datetime, "ip": str}
-    _workstations: dict[UUID, dict[str, dict[str, Any]]] = {}
+    _workstations: ClassVar[dict[UUID, dict[str, dict[str, Any]]]] = {}
 
     @classmethod
     async def connect_workstation(
@@ -31,7 +32,7 @@ class ClinicNetworkService:
         cls._workstations[clinic_id][workstation_id] = {
             "ws": websocket,
             "role": role.upper(),
-            "connected_at": datetime.now(timezone.utc),
+            "connected_at": datetime.now(UTC),
             "client_ip": client_ip,
         }
         logger.info(
@@ -79,7 +80,7 @@ class ClinicNetworkService:
 
         message = {
             "type": event_type,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "data": payload,
         }
         text_data = json.dumps(message)
@@ -96,7 +97,7 @@ class ClinicNetworkService:
             try:
                 await ws.send_text(text_data)
                 sent += 1
-            except Exception:
+            except (WebSocketDisconnect, RuntimeError, OSError):
                 dead_connections.append(ws_id)
 
         for ws_id in dead_connections:

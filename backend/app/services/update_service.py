@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import hashlib
 import logging
-import os
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +36,7 @@ class UpdateService:
 
     @classmethod
     async def check_for_updates(cls, current_version: str = CURRENT_APP_VERSION) -> UpdateCheckResponse:
-        cls._last_checked = datetime.now(timezone.utc)
+        cls._last_checked = datetime.now(UTC)
         # In desktop production, check local channel metadata or remote enterprise repository
         # For current release 1.0.0, we provide full channel metadata:
         latest_version = "1.0.0"
@@ -59,7 +57,7 @@ class UpdateService:
             download_url=None,
             sha256=None,
             mandatory=False,
-            published_at=datetime(2026, 9, 9, 0, 0, 0, tzinfo=timezone.utc),
+            published_at=datetime(2026, 9, 9, 0, 0, 0, tzinfo=UTC),
         )
 
     @classmethod
@@ -89,10 +87,10 @@ class UpdateService:
                 is_encrypted=True,
             )
             logger.info("Pre-update backup created: %s", pre_backup.file_name)
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             cls._status = "FAILED"
             cls._progress = 0
-            cls._message = f"Pre-update safety backup failed: {str(e)}. Update aborted."
+            cls._message = f"Pre-update safety backup failed: {e!s}. Update aborted."
             raise RuntimeError(cls._message) from e
 
         # Step 2: Verify binary integrity if package provided
@@ -108,8 +106,7 @@ class UpdateService:
                 raise FileNotFoundError(cls._message)
 
             if expected_sha256:
-                with open(pkg_file, "rb") as f:
-                    content = f.read()
+                content = pkg_file.read_bytes()
                 actual_sha = hashlib.sha256(content).hexdigest()
                 if actual_sha.lower() != expected_sha256.lower():
                     cls._status = "FAILED"

@@ -1,18 +1,13 @@
 from __future__ import annotations
 
-import base64
-from datetime import date, datetime, timezone
 import hashlib
-import io
-import json
+from datetime import date
 from pathlib import Path
 from uuid import uuid4
-import zipfile
 
 import pytest
 from cryptography.fernet import Fernet
 
-from app.models.commercial import BackupDestination, BackupType, SignatureType
 from app.schemas.admin_settings import (
     BackupScheduleSettings,
     ClinicProfileSettings,
@@ -23,9 +18,9 @@ from app.schemas.admin_settings import (
     WorkingHoursSettings,
 )
 from app.services.backup_service import _derive_fernet_key
+from app.services.clinic_network_service import ClinicNetworkService
 from app.services.clinical_document_pdf_service import ClinicalDocumentPDFService
 from app.services.clinical_storage_service import AntiVirusService
-from app.services.clinic_network_service import ClinicNetworkService
 from app.services.qr_service import QRCodeService
 from app.services.signature_service import ClinicianSignatureService
 from app.services.update_service import CURRENT_APP_VERSION, UpdateService

@@ -3,9 +3,9 @@ from __future__ import annotations
 import glob
 import logging
 import os
-from pathlib import Path
 import subprocess
-from typing import Any
+from datetime import UTC
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, UploadFile, status
@@ -35,7 +35,7 @@ def _find_windows_defender() -> str | None:
         return None
     matches = glob.glob(r"C:\ProgramData\Microsoft\Windows Defender\Platform\*\MpCmdRun.exe")
     if matches:
-        return sorted(matches)[-1]
+        return max(matches)
     default_path = r"C:\Program Files\Windows Defender\MpCmdRun.exe"
     if Path(default_path).exists():
         return default_path
@@ -50,7 +50,7 @@ class AntiVirusService:
         try:
             with open(file_path, "rb") as f:
                 header = f.read(4)
-                if header.startswith(b"MZ") or header.startswith(b"\x7fELF"):
+                if header.startswith((b"MZ", b"\x7fELF")):
                     return False, "Prohibited executable binary payload detected in file"
         except OSError:
             pass
@@ -60,13 +60,13 @@ class AntiVirusService:
         if defender_bin and file_path.exists():
             try:
                 cmd = [defender_bin, "-Scan", "-ScanType", "3", "-File", str(file_path)]
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
                 # 0: No threat detected, 2: Threat found
                 if res.returncode == 2:
                     return False, "Threat detected by Windows Defender"
                 elif res.returncode == 0:
                     return True, "Scanned clean with Windows Defender"
-            except Exception as e:
+            except (subprocess.SubprocessError, OSError) as e:
                 logger.warning("Windows Defender scan exception: %s", e)
 
         return True, "Passed security verification"
@@ -178,8 +178,8 @@ class ClinicalStorageService:
         doc = await db.get(MobileClinicalMedia, document_id)
         if not doc or doc.deleted_at is not None:
             return False
-        from datetime import datetime, timezone
-        doc.deleted_at = datetime.now(timezone.utc)
+        from datetime import datetime
+        doc.deleted_at = datetime.now(UTC)
         await db.commit()
         return True
 

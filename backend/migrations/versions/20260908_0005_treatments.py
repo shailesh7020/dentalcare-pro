@@ -1,7 +1,7 @@
 """Create treatment, treatment procedure, and treatment follow-up tables."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql as pg
 
 revision = "20260908_0005"

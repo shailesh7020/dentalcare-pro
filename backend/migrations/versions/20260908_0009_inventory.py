@@ -1,7 +1,7 @@
 """Create suppliers, inventory_items, inventory_batches, purchase_orders, purchase_order_items, stock_transactions, and procedure_material_templates tables."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "20260908_0009"
 down_revision = "20260908_0008"

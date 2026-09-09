@@ -1,7 +1,7 @@
 """Harden identity constraints, audit metadata, and refresh-token rotation."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "20260902_0002"
 down_revision = "20260902_0001"

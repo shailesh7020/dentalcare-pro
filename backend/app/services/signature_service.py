@@ -16,7 +16,7 @@ from app.models.identity import User
 class ClinicianSignatureService:
     @staticmethod
     def calculate_hash(user_id: UUID, signature_data: str) -> str:
-        payload = f"{user_id}:{signature_data}".encode("utf-8")
+        payload = f"{user_id}:{signature_data}".encode()
         return hashlib.sha256(payload).hexdigest()
 
     @classmethod
@@ -98,5 +98,5 @@ class ClinicianSignatureService:
                 b64_str = signature_data
             raw_bytes = base64.b64decode(b64_str)
             return PlatypusImage(io.BytesIO(raw_bytes), width=width, height=height)
-        except Exception:
+        except (ValueError, OSError):
             return None

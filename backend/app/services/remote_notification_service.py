@@ -6,13 +6,11 @@ and revenue reports via database logs, Web Push, and email.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
 import json
 import logging
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import (

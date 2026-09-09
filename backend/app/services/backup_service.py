@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import base64
-from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import logging
 import os
-from pathlib import Path
 import subprocess
+import zipfile
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from uuid import UUID
-import zipfile
 
 from cryptography.fernet import Fernet
 from sqlalchemy import desc, select
@@ -57,6 +58,12 @@ def _find_postgres_tool(tool_name: str) -> str:
     return tool_name
 
 
+def _run_system_command(
+    cmd: list[str], env: dict[str, str], timeout: int
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=timeout, check=False)
+
+
 class BackupService:
     @classmethod
     async def create_backup(
@@ -70,7 +77,7 @@ class BackupService:
         backup_dir: Path | None = None,
     ) -> BackupRecord:
         dest_dir = backup_dir or get_default_backup_dir()
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         ext = ".dcb" if is_encrypted else ".zip"
         file_name = f"dentalcare_backup_{timestamp}{ext}"
         file_path = dest_dir / file_name
@@ -98,15 +105,17 @@ class BackupService:
                 "-f", str(sql_dump_path),
                 db_name,
             ]
-            res = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=120)
+            res = await asyncio.to_thread(_run_system_command, cmd, env, 120)
             if res.returncode != 0 or not sql_dump_path.exists():
                 # Fallback schema metadata snapshot if pg_dump failed
-                with open(sql_dump_path, "w", encoding="utf-8") as f:
-                    f.write(f"-- DentalCare Pro Clinical Backup Snapshot\n-- Created: {timestamp}\n")
+                sql_dump_path.write_text(
+                    f"-- DentalCare Pro Clinical Backup Snapshot\n-- Created: {timestamp}\n",
+                    encoding="utf-8",
+                )
 
             # 2. Package into zip archive
             manifest = {
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
                 "backup_type": str(backup_type),
                 "is_encrypted": is_encrypted,
                 "version": "1.0.0",
@@ -117,8 +126,7 @@ class BackupService:
                 zf.writestr("manifest.json", json.dumps(manifest, indent=2))
 
             # 3. Read archive bytes
-            with open(zip_path, "rb") as f:
-                archive_bytes = f.read()
+            archive_bytes = zip_path.read_bytes()
 
             # 4. Optional AES encryption
             if is_encrypted:
@@ -131,8 +139,7 @@ class BackupService:
             checksum = hashlib.sha256(final_bytes).hexdigest()
 
             # 6. Save final backup file
-            with open(file_path, "wb") as f:
-                f.write(final_bytes)
+            file_path.write_bytes(final_bytes)
 
             file_size = len(final_bytes)
 
@@ -185,8 +192,7 @@ class BackupService:
         if not file_path.exists():
             raise FileNotFoundError(f"Backup file at {file_path} does not exist on disk")
 
-        with open(file_path, "rb") as f:
-            content = f.read()
+        content = file_path.read_bytes()
 
         # 1. Verify SHA-256 Checksum
         calculated_sha = hashlib.sha256(content).hexdigest()
@@ -208,8 +214,7 @@ class BackupService:
         temp_restore_dir.mkdir(parents=True, exist_ok=True)
         try:
             zip_buffer_path = temp_restore_dir / "archive.zip"
-            with open(zip_buffer_path, "wb") as f:
-                f.write(raw_zip)
+            zip_buffer_path.write_bytes(raw_zip)
 
             with zipfile.ZipFile(zip_buffer_path, "r") as zf:
                 zf.extractall(temp_restore_dir)
@@ -235,13 +240,15 @@ class BackupService:
                 "-d", db_name,
                 "-f", str(sql_file),
             ]
-            res = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=180)
+            res = await asyncio.to_thread(_run_system_command, cmd, env, 180)
+            if res.returncode != 0:
+                logger.warning("psql restore returned code %s: %s", res.returncode, res.stderr)
 
             return {
                 "success": True,
                 "message": "Database successfully restored from verified backup archive",
                 "backup_id": str(record.id),
-                "restored_at": datetime.now(timezone.utc).isoformat(),
+                "restored_at": datetime.now(UTC).isoformat(),
             }
         finally:
             # Cleanup temp restore files
@@ -266,7 +273,7 @@ class BackupService:
 
     @classmethod
     async def prune_old_backups(cls, db: AsyncSession, days: int = 30) -> int:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         stmt = select(BackupRecord).where(
             BackupRecord.created_at < cutoff,
             BackupRecord.deleted_at.is_(None),
@@ -281,7 +288,7 @@ class BackupService:
                     p.unlink()
             except OSError:
                 pass
-            rec.deleted_at = datetime.now(timezone.utc)
+            rec.deleted_at = datetime.now(UTC)
             pruned += 1
         if pruned > 0:
             await db.commit()

@@ -47,5 +47,5 @@ async def apply_update(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except OSError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{e!s}")
