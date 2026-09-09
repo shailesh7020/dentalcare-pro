@@ -1,0 +1,32 @@
+======================================================================
+  DENTALCARE PRO ENTERPRISE - TECHNICAL SUPPORT & CLINIC HOTLINE
+======================================================================
+
+If you experience any difficulties during installation or clinic operation,
+our clinical systems support team is available 24/7/365.
+
+TECHNICAL SUPPORT CONTACTS:
+  * Toll-Free Support Hotline:  +1 (800) 555-DENT  (1-800-555-3368)
+  * Priority Clinic Email:      support@dentalcarepro.com
+  * IT Administrator Portal:    https://portal.dentalcarepro.local/support
+  * Emergency Dental IT Desk:   it-urgent@dentalcarepro.com
+
+DIAGNOSTIC & TROUBLESHOOTING UTILITIES:
+  * To run automated hardware and database checks, double-click:
+    "Support\Diagnostic-Tool.exe"
+
+  * To test PostgreSQL connection on this workstation, double-click:
+    "Support\Database-Troubleshooter.bat"
+
+LOG FILE LOCATIONS:
+  Log files are stored locally for HIPAA compliance:
+  %LOCALAPPDATA%\DentalCarePro\logs\
+    - app.log         (Desktop shell & supervisor events)
+    - backend.log     (Clinical API & database transactions)
+    - crash.log       (Crash telemetry & auto-recovery events)
+    - backup.log      (Automated daily backup history)
+    - installer.log   (Setup wizard installation events)
+
+PATIENT DATA PRIVACY GUARANTEE:
+  DentalCare Pro never transmits patient records, odontograms, or radiographs
+  to external servers. All data remains 100% inside your clinic network.

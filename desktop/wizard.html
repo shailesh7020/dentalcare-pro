@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DentalCare Pro - First-Launch Setup Wizard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .wizard-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      width: 680px;
+      padding: 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    .logo {
+      width: 44px; height: 44px;
+      background: #0f766e;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: bold; font-size: 20px;
+    }
+    h2 { font-size: 20px; font-weight: 700; color: #fff; }
+    p.desc { font-size: 12px; color: #94a3b8; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .full-width { grid-column: span 2; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 11px; font-weight: 600; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }
+    input, select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #f8fafc;
+      padding: 10px 12px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus { border-color: #2dd4bf; }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #334155;
+      padding-top: 20px;
+      margin-top: 10px;
+    }
+    button {
+      cursor: pointer;
+      font-weight: 600;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 13px;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-test {
+      background: #334155;
+      color: #cbd5e1;
+    }
+    .btn-test:hover { background: #475569; color: #fff; }
+    .btn-primary {
+      background: #0f766e;
+      color: #ffffff;
+    }
+    .btn-primary:hover { background: #115e59; }
+    .status-alert {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: none;
+    }
+    .status-alert.success { background: #064e3b; color: #a7f3d0; border: 1px solid #059669; display: block; }
+    .status-alert.error { background: #7f1d1d; color: #fecaca; border: 1px solid #dc2626; display: block; }
+  </style>
+</head>
+<body>
+  <div class="wizard-card">
+    <div class="header">
+      <div class="logo">+</div>
+      <div>
+        <h2>DentalCare Pro — Practice Setup Wizard</h2>
+        <p class="desc">Configure your clinic profile and database settings to initialize your workstation.</p>
+      </div>
+    </div>
+
+    <form id="setupForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Clinic Name *</label>
+          <input type="text" id="clinicName" value="Apex Family Dental Care" required />
+        </div>
+        <div class="form-group">
+          <label>Lead Doctor Name *</label>
+          <input type="text" id="doctorName" value="Dr. Sarah Jenkins, DDS" required />
+        </div>
+
+        <div class="form-group">
+          <label>Administrator Full Name *</label>
+          <input type="text" id="adminName" value="Dr. Sarah Jenkins" required />
+        </div>
+        <div class="form-group">
+          <label>Admin Login Email *</label>
+          <input type="email" id="adminEmail" value="admin@dentalcarepro.local" required />
+        </div>
+
+        <div class="form-group">
+          <label>Admin Password *</label>
+          <input type="password" id="adminPassword" value="DentalProSecure2026!" required />
+        </div>
+        <div class="form-group">
+          <label>Database Password *</label>
+          <input type="password" id="dbPassword" value="postgres" required />
+        </div>
+
+        <div class="form-group">
+          <label>Language</label>
+          <select id="language">
+            <option value="en-US" selected>English (United States)</option>
+            <option value="en-GB">English (United Kingdom)</option>
+            <option value="es-ES">Spanish (Español)</option>
+            <option value="fr-FR">French (Français)</option>
+            <option value="de-DE">German (Deutsch)</option>
+            <option value="hi-IN">Hindi (हिन्दी)</option>
+            <option value="ar-SA">Arabic (العربية)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Theme</label>
+          <select id="theme">
+            <option value="dark-teal" selected>Modern Dark Teal (Default)</option>
+            <option value="light-clean">Clean Clinical Light</option>
+            <option value="ocean-blue">Ocean Dental Blue</option>
+            <option value="high-contrast">High Contrast Medical</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Timezone</label>
+          <select id="timezone">
+            <option value="America/New_York">Eastern Time (US/Canada)</option>
+            <option value="America/Chicago">Central Time (US/Canada)</option>
+            <option value="America/Los_Angeles">Pacific Time (US/Canada)</option>
+            <option value="Europe/London">London (GMT/BST)</option>
+            <option value="Asia/Kolkata" selected>India Standard Time (IST)</option>
+            <option value="Asia/Dubai">Gulf Standard Time (GST)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Local API Port</label>
+          <input type="number" id="apiPort" value="8000" min="1024" max="65535" required />
+        </div>
+
+        <div class="form-group full-width">
+          <label>PostgreSQL Database Connection String</label>
+          <input type="text" id="databaseUrl" value="postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/dentalcare" required />
+        </div>
+
+        <div class="form-group full-width">
+          <label>Backup Storage Directory</label>
+          <input type="text" id="backupPath" value="C:\DentalCarePro_Backups" required />
+        </div>
+      </div>
+
+      <div id="statusAlert" class="status-alert"></div>
+
+      <div class="actions">
+        <button type="button" class="btn-test" id="testBtn">Test Connection</button>
+        <button type="submit" class="btn-primary" id="saveBtn">Complete Setup &amp; Launch</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const testBtn = document.getElementById('testBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const statusAlert = document.getElementById('statusAlert');
+    const form = document.getElementById('setupForm');
+
+    // Bridge helper for pywebview or electron
+    const callApi = async (method, arg) => {
+      if (window.pywebview && window.pywebview.api && window.pywebview.api[method]) {
+        return await window.pywebview.api[method](arg);
+      }
+      if (window.desktopAPI && window.desktopAPI[method]) {
+        return await window.desktopAPI[method](arg);
+      }
+      return { success: true, mock: true };
+    };
+
+    testBtn.addEventListener('click', async () => {
+      testBtn.disabled = true;
+      testBtn.innerText = 'Testing...';
+      statusAlert.className = 'status-alert';
+      statusAlert.style.display = 'none';
+
+      try {
+        const config = {
+          databaseUrl: document.getElementById('databaseUrl').value,
+          dbPassword: document.getElementById('dbPassword').value
+        };
+        const result = await callApi('testDbConnection', config);
+        if (result.success) {
+          statusAlert.className = 'status-alert success';
+          statusAlert.innerText = '✓ Connection to PostgreSQL verified successfully!';
+        } else {
+          statusAlert.className = 'status-alert error';
+          statusAlert.innerText = '✕ Connection failed: ' + (result.error || 'Check PostgreSQL status');
+        }
+      } catch (err) {
+        statusAlert.className = 'status-alert error';
+        statusAlert.innerText = '✕ Error: ' + err.message;
+      } finally {
+        testBtn.disabled = false;
+        testBtn.innerText = 'Test Connection';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saveBtn.disabled = true;
+      saveBtn.innerText = 'Saving & Launching...';
+
+      const payload = {
+        clinicName: document.getElementById('clinicName').value,
+        doctorName: document.getElementById('doctorName').value,
+        adminName: document.getElementById('adminName').value,
+        adminEmail: document.getElementById('adminEmail').value,
+        adminPassword: document.getElementById('adminPassword').value,
+        dbPassword: document.getElementById('dbPassword').value,
+        theme: document.getElementById('theme').value,
+        language: document.getElementById('language').value,
+        timezone: document.getElementById('timezone').value,
+        DATABASE_URL: document.getElementById('databaseUrl').value,
+        PORT: parseInt(document.getElementById('apiPort').value, 10),
+        BACKUP_PATH: document.getElementById('backupPath').value,
+      };
+
+      try {
+        const res = await callApi('saveSetupConfig', payload);
+        if (res.success) {
+          statusAlert.className = 'status-alert success';
+          statusAlert.innerText = '✓ Setup complete! Loading DentalCare Pro...';
+          setTimeout(() => {
+            if (window.pywebview && window.pywebview.api && window.pywebview.api.onSetupComplete) {
+              window.pywebview.api.onSetupComplete();
+            }
+          }, 1500);
+        } else {
+          statusAlert.className = 'status-alert error';
+          statusAlert.innerText = '✕ Failed to save configuration: ' + res.error;
+          saveBtn.disabled = false;
+          saveBtn.innerText = 'Complete Setup & Launch';
+        }
+      } catch (err) {
+        statusAlert.className = 'status-alert error';
+        statusAlert.innerText = '✕ Error: ' + err.message;
+        saveBtn.disabled = false;
+        saveBtn.innerText = 'Complete Setup & Launch';
+      }
+    });
+  </script>
+</body>
+</html>

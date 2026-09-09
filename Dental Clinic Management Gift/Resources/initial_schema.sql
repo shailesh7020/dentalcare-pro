@@ -1,0 +1,2 @@
+-- DentalCare Pro v1.0.0 Database Schema Initializer
+-- Handled automatically on first startup via embedded Alembic migrations.

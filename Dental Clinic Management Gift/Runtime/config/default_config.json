@@ -1,0 +1,10 @@
+{
+  "VERSION": "1.0.0",
+  "PORT": 8000,
+  "CLINIC_NAME": "Dental Clinic Practice",
+  "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/dentalcare",
+  "BACKUP_PATH": "C:\\DentalCarePro_Backups",
+  "THEME": "dark-teal",
+  "TIMEZONE": "Asia/Kolkata",
+  "LANGUAGE": "en-US"
+}

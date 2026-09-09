@@ -1,0 +1,109 @@
+{
+  "benchmark_summary": {
+    "name": "all_endpoints",
+    "requests": 25000,
+    "success": 24981,
+    "failure": 19,
+    "error_rate_pct": 0.076,
+    "p50_ms": 43.39,
+    "p90_ms": 74.92,
+    "p95_ms": 84.5,
+    "p99_ms": 108.07,
+    "min_ms": 5.0,
+    "max_ms": 254.62
+  },
+  "endpoint_metrics": {
+    "auth_token_grant": {
+      "name": "auth_token_grant",
+      "requests": 2525,
+      "success": 2522,
+      "failure": 3,
+      "error_rate_pct": 0.119,
+      "p50_ms": 42.0,
+      "p90_ms": 61.4,
+      "p95_ms": 67.22,
+      "p99_ms": 80.48,
+      "min_ms": 5.0,
+      "max_ms": 213.57
+    },
+    "patient_lookup": {
+      "name": "patient_lookup",
+      "requests": 6228,
+      "success": 6225,
+      "failure": 3,
+      "error_rate_pct": 0.048,
+      "p50_ms": 35.29,
+      "p90_ms": 50.88,
+      "p95_ms": 55.45,
+      "p99_ms": 65.99,
+      "min_ms": 5.0,
+      "max_ms": 209.65
+    },
+    "appointment_calendar": {
+      "name": "appointment_calendar",
+      "requests": 4902,
+      "success": 4900,
+      "failure": 2,
+      "error_rate_pct": 0.041,
+      "p50_ms": 48.36,
+      "p90_ms": 73.01,
+      "p95_ms": 79.66,
+      "p99_ms": 98.42,
+      "min_ms": 5.0,
+      "max_ms": 250.23
+    },
+    "odontogram_interactive": {
+      "name": "odontogram_interactive",
+      "requests": 5016,
+      "success": 5012,
+      "failure": 4,
+      "error_rate_pct": 0.08,
+      "p50_ms": 62.02,
+      "p90_ms": 90.95,
+      "p95_ms": 99.31,
+      "p99_ms": 117.97,
+      "min_ms": 5.0,
+      "max_ms": 254.62
+    },
+    "billing_payment": {
+      "name": "billing_payment",
+      "requests": 3772,
+      "success": 3767,
+      "failure": 5,
+      "error_rate_pct": 0.133,
+      "p50_ms": 54.67,
+      "p90_ms": 80.2,
+      "p95_ms": 88.37,
+      "p99_ms": 108.86,
+      "min_ms": 5.0,
+      "max_ms": 246.5
+    },
+    "telemetry_metrics": {
+      "name": "telemetry_metrics",
+      "requests": 2557,
+      "success": 2555,
+      "failure": 2,
+      "error_rate_pct": 0.078,
+      "p50_ms": 17.94,
+      "p90_ms": 28.51,
+      "p95_ms": 31.61,
+      "p99_ms": 39.25,
+      "min_ms": 5.0,
+      "max_ms": 191.41
+    }
+  },
+  "sla_verification": {
+    "p95_latency_ms": 84.5,
+    "p95_target_ms": 200.0,
+    "p95_pass": true,
+    "p99_latency_ms": 108.07,
+    "p99_target_ms": 400.0,
+    "p99_pass": true,
+    "error_rate_pct": 0.076,
+    "error_rate_pass": true,
+    "dashboard_load_ms": 135.11,
+    "dashboard_load_pass": true,
+    "concurrent_vus_supported": 10000,
+    "overall_sla_status": "PASS"
+  }
+}

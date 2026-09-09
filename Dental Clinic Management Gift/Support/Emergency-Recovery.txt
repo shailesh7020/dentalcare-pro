@@ -1,0 +1,21 @@
+======================================================================
+  DENTALCARE PRO - EMERGENCY DISASTER RECOVERY QUICK REFERENCE
+======================================================================
+
+In the event of hardware failure, power disruption, or workstation replacement:
+
+1. DATABASE RESTORATION:
+   - Database backups are stored daily in:
+     C:\DentalCarePro_Backups\
+   - To restore a backup, open PowerShell or Command Prompt in the DentalCare Pro folder:
+     backup_manager.exe --restore "C:\DentalCarePro_Backups\dentalcare_backup_YYYYMMDD_HHMMSS.sql"
+
+2. MOVING TO A NEW COMPUTER:
+   - Copy the "Dental Clinic Management Gift" folder to the new computer.
+   - Run "Install DentalCare Pro.exe".
+   - Copy the latest backup SQL file from your old computer to C:\DentalCarePro_Backups\.
+   - Restore using the command above or the First-Run Setup Wizard.
+
+3. DATA RETENTION GUARANTEE:
+   - Patient health information is never deleted during uninstallation unless
+     the administrator explicitly confirms removal.

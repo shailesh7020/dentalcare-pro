@@ -1,10 +1,13 @@
 node_modules
-.env
-.env.local
+
+.next
 
 dist
+
 build
-.next
+
+.env
+.env.*
 
 coverage
 
@@ -12,10 +15,15 @@ coverage
 
 .vscode/settings.json
 
-.DS_Store
+turbo
 
-package-lock.json
+.prisma
 
 generated
-
-uploads
+/generated/prisma
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+*.exe

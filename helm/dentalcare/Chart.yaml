@@ -1,0 +1,14 @@
+apiVersion: v2
+name: dentalcare-pro
+description: Enterprise Multi-Clinic Dental Practice Management System Helm Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - dentalcare
+  - healthcare
+  - multi-tenant
+  - saas
+maintainers:
+  - name: DentalCare DevOps Team
+    email: devops@dentalcarepro.local

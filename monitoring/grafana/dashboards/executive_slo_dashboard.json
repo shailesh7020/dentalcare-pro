@@ -1,0 +1,53 @@
+{
+  "title": "DentalCare Pro - Executive Reliability & SLO Dashboard",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "SLA Availability (Target: 99.9%)",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 4},
+      "targets": [{"expr": "(1 - (sum(rate(dentalcare_http_requests_total{status=~'5..'}[30d])) / sum(rate(dentalcare_http_requests_total[30d])))) * 100"}],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": null, "color": "red"},
+              {"value": 99.5, "color": "yellow"},
+              {"value": 99.9, "color": "green"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "P95 Response Latency (Target: < 200ms)",
+      "type": "stat",
+      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 4},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(dentalcare_http_request_duration_seconds_bucket[5m])) by (le)) * 1000"}],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": null, "color": "green"},
+              {"value": 200, "color": "yellow"},
+              {"value": 500, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Current Request Throughput (RPS)",
+      "type": "stat",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 4},
+      "targets": [{"expr": "sum(rate(dentalcare_http_requests_total[1m]))"}],
+      "fieldConfig": {"defaults": {"unit": "reqps", "color": {"mode": "palette-classic"}}}
+    }
+  ]
+}

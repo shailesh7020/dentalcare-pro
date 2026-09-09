@@ -1,0 +1,85 @@
+{
+  "timestamp_utc": "2026-09-08T19:32:22Z",
+  "total_requests": 35000,
+  "aggregate_metrics": {
+    "name": "all_api_requests",
+    "requests": 35000,
+    "p50_ms": 34.57,
+    "p90_ms": 55.92,
+    "p95_ms": 62.54,
+    "p99_ms": 75.76,
+    "error_rate_pct": 0.023
+  },
+  "endpoint_breakdown": {
+    "auth_jwt_token": {
+      "name": "auth_jwt_token",
+      "requests": 3562,
+      "p50_ms": 38.31,
+      "p90_ms": 50.73,
+      "p95_ms": 54.05,
+      "p99_ms": 61.0,
+      "error_rate_pct": 0.028
+    },
+    "patient_search_indexed": {
+      "name": "patient_search_indexed",
+      "requests": 8782,
+      "p50_ms": 28.11,
+      "p90_ms": 38.49,
+      "p95_ms": 41.39,
+      "p99_ms": 47.78,
+      "error_rate_pct": 0.034
+    },
+    "appointment_agenda_query": {
+      "name": "appointment_agenda_query",
+      "requests": 6956,
+      "p50_ms": 36.2,
+      "p90_ms": 51.96,
+      "p95_ms": 56.17,
+      "p99_ms": 64.49,
+      "error_rate_pct": 0.014
+    },
+    "odontogram_surface_chart": {
+      "name": "odontogram_surface_chart",
+      "requests": 7005,
+      "p50_ms": 48.18,
+      "p90_ms": 67.63,
+      "p95_ms": 73.17,
+      "p99_ms": 83.76,
+      "error_rate_pct": 0.029
+    },
+    "billing_payment_record": {
+      "name": "billing_payment_record",
+      "requests": 5225,
+      "p50_ms": 42.27,
+      "p90_ms": 60.59,
+      "p95_ms": 65.13,
+      "p99_ms": 76.22,
+      "error_rate_pct": 0.019
+    },
+    "metrics_telemetry_scrape": {
+      "name": "metrics_telemetry_scrape",
+      "requests": 3470,
+      "p50_ms": 13.93,
+      "p90_ms": 20.29,
+      "p95_ms": 22.11,
+      "p99_ms": 25.79,
+      "error_rate_pct": 0.0
+    }
+  },
+  "sla_verification": {
+    "api_p95_ms": 62.54,
+    "api_p95_target_ms": 150.0,
+    "api_p95_pass": true,
+    "dashboard_load_ms": 97.56,
+    "dashboard_load_target_ms": 300.0,
+    "dashboard_load_pass": true,
+    "mobile_startup_sec": 1.15,
+    "mobile_startup_target_sec": 2.0,
+    "mobile_startup_pass": true,
+    "page_transition_ms": 85.0,
+    "page_transition_target_ms": 200.0,
+    "page_transition_pass": true,
+    "concurrent_vus_supported": 10000,
+    "overall_status": "PASS"
+  }
+}

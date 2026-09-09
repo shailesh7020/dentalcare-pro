@@ -1,0 +1,3 @@
+"postgres" "SCRAM-SHA-256$4096:production_salt$production_stored_key:production_server_key"
+"dentalcare_user" "SCRAM-SHA-256$4096:app_salt$app_stored_key:app_server_key"
+"prometheus_exporter" "SCRAM-SHA-256$4096:exporter_salt$exporter_stored_key:exporter_server_key"

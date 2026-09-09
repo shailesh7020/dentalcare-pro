@@ -1,0 +1,8 @@
+environment          = "production"
+aws_region           = "ap-south-1"
+vpc_cidr             = "10.100.0.0/16"
+cluster_name         = "dentalcare-eks-prod"
+db_instance_class    = "db.r6g.xlarge"
+db_allocated_storage = 250
+redis_node_type      = "cache.r6g.large"
+domain_name          = "dentalcarepro.com"

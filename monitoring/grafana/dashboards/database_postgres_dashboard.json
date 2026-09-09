@@ -1,0 +1,20 @@
+{
+  "title": "DentalCare Pro - PostgreSQL & Connection Pool Telemetry",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "Active PostgreSQL Client Connections",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 4},
+      "targets": [{"expr": "dentalcare_db_connections_active"}]
+    },
+    {
+      "title": "Active Background Worker Queue Depth",
+      "type": "stat",
+      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 4},
+      "targets": [{"expr": "sum(dentalcare_redis_queue_length)"}]
+    }
+  ]
+}

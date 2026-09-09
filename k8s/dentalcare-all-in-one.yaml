@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dentalcare
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dentalcare-config
+  namespace: dentalcare
+data:
+  ENVIRONMENT: "production"
+  JWT_ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "15"
+  REFRESH_TOKEN_EXPIRE_DAYS: "14"
+  CORS_ORIGINS: "https://app.dentalcarepro.com"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dentalcare-backend
+  namespace: dentalcare
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dentalcare-backend
+  template:
+    metadata:
+      labels:
+        app: dentalcare-backend
+    spec:
+      containers:
+        - name: backend
+          image: dentalcare/backend:1.0.0
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/ready
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/live
+              port: 8000

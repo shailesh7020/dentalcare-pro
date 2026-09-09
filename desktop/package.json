@@ -1,0 +1,39 @@
+{
+  "name": "dentalcare-pro-desktop",
+  "version": "1.0.0",
+  "description": "DentalCare Pro Enterprise Dental Practice Management Desktop Application",
+  "main": "main.js",
+  "author": "DentalCare Pro Inc.",
+  "license": "Commercial",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.dentalcarepro.desktop",
+    "productName": "DentalCare Pro",
+    "copyright": "Copyright © 2026 DentalCare Pro Inc.",
+    "directories": {
+      "output": "../dist/desktop"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "../assets/branding/app_icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DentalCare Pro",
+      "installerIcon": "../assets/branding/app_icon.ico",
+      "uninstallerIcon": "../assets/branding/app_icon.ico"
+    }
+  }
+}
