@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from io import BytesIO
 from typing import Any
 
@@ -531,9 +532,18 @@ class BillingPDFService:
         story.append(Paragraph("<b>PAYMENT RECEIPT (80mm)</b>", title_style))
         story.append(Spacer(1, 4))
 
+        if payment.payment_date:
+            receipt_date_str = payment.payment_date.strftime("%d-%b-%Y")
+            if getattr(payment, "created_at", None):
+                receipt_date_str += " " + payment.created_at.strftime("%H:%M")
+        elif getattr(payment, "created_at", None):
+            receipt_date_str = payment.created_at.strftime("%d-%b-%Y %H:%M")
+        else:
+            receipt_date_str = datetime.now(UTC).strftime("%d-%b-%Y %H:%M")
+
         meta_rows = [
             [Paragraph("Receipt #:", line_style), Paragraph(f"<b>{payment.receipt_number}</b>", bold_style)],
-            [Paragraph("Date / Time:", line_style), Paragraph(payment.payment_date.strftime("%d-%b-%Y %H:%M"), line_style)],
+            [Paragraph("Date / Time:", line_style), Paragraph(receipt_date_str, line_style)],
             [Paragraph("Payment Mode:", line_style), Paragraph(f"<b>{payment.method}</b>", bold_style)],
         ]
         if payment.transaction_reference:

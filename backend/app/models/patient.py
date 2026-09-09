@@ -58,7 +58,9 @@ class Patient(Base, UUIDAuditMixin):
     last_name: Mapped[str] = mapped_column(String(80), nullable=False)
     gender: Mapped[Gender] = mapped_column(Enum(Gender, name="patient_gender"), nullable=False)
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
-    blood_group: Mapped[BloodGroup | None] = mapped_column(Enum(BloodGroup, name="blood_group"))
+    blood_group: Mapped[BloodGroup | None] = mapped_column(
+        Enum(BloodGroup, name="blood_group", values_callable=lambda obj: [e.value for e in obj])
+    )
     marital_status: Mapped[str | None] = mapped_column(String(40))
     occupation: Mapped[str | None] = mapped_column(String(100))
     aadhaar_number: Mapped[str | None] = mapped_column(String(12), index=True)
