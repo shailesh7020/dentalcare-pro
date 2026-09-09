@@ -293,7 +293,7 @@ ingress:
             {
                 "id": str(n.id),
                 "title": n.title,
-                "message": n.body,
+                "message": getattr(n, "message", getattr(n, "body", "")),
                 "created_at": n.created_at.isoformat(),
             }
             for n in notifs

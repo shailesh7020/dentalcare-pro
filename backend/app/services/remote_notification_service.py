@@ -41,14 +41,14 @@ class RemoteNotificationService:
         """Record notification in database and format multi-channel dispatch."""
         notif = Notification(
             clinic_id=clinic_id,
-            user_id=recipient_user_id,
-            type=notification_type,
+            recipient_user_id=recipient_user_id,
+            notification_type=notification_type,
             priority=priority,
-            channel=DeliveryChannel.IN_APP,
+            delivery_channel=DeliveryChannel.IN_APP,
             title=title,
-            body=body,
+            message=body,
             status=NotificationStatus.SENT,
-            metadata_json=json.dumps(metadata or {}),
+            data_json=json.dumps(metadata or {}),
         )
         db.add(notif)
         await db.commit()
@@ -138,17 +138,20 @@ class RemoteNotificationService:
         )
 
     @classmethod
-    def format_web_push_payload(cls, notif: Notification) -> dict[str, Any]:
+    def format_web_push_payload(cls, notif: Any) -> dict[str, Any]:
         """Format Web Push API standard payload for browser push notifications."""
+        notif_type = getattr(notif, "notification_type", getattr(notif, "type", "SYSTEM_ALERT"))
+        type_val = getattr(notif_type, "value", str(notif_type))
+        body_val = getattr(notif, "message", getattr(notif, "body", ""))
         return {
             "notification": {
                 "title": notif.title,
-                "body": notif.body,
+                "body": body_val,
                 "icon": "/icons/icon-192x192.png",
                 "badge": "/icons/badge-72x72.png",
                 "data": {
                     "notification_id": str(notif.id),
-                    "type": notif.type.value,
+                    "type": type_val,
                     "url": "/mobile",
                 },
                 "actions": [
