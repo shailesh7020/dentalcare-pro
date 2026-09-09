@@ -14,12 +14,20 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from typing import Any
+
 from app.schemas.billing import InvoiceDetail, PaymentDetail
+from app.services.qr_service import QRCodeService
+from app.services.signature_service import ClinicianSignatureService
 
 
 class BillingPDFService:
     @staticmethod
-    def generate_invoice_pdf(invoice: InvoiceDetail) -> bytes:
+    def generate_invoice_pdf(
+        invoice: InvoiceDetail,
+        signature_data: str | None = None,
+        verification_hash: str | None = None,
+    ) -> bytes:
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -278,13 +286,34 @@ class BillingPDFService:
         story.append(Spacer(1, 20))
 
         # 6. Signature Block
+        actual_hash = verification_hash or f"INV-{str(invoice.id)[:8].upper()}"
+        total_val = getattr(invoice, "grand_total", getattr(invoice, "total_amount", 0.0))
+        qr_flow = QRCodeService.generate_qr_flowable(
+            QRCodeService.generate_invoice_payload(str(invoice.id), total_val, actual_hash),
+            size=50,
+        )
+
+        auth_sig_cell: list[Any] = []
+        if signature_data:
+            sig_img = ClinicianSignatureService.create_signature_flowable(signature_data, width=100, height=30)
+            if sig_img:
+                auth_sig_cell.append(sig_img)
+        auth_sig_cell.append(
+            Paragraph("<b>Authorized Signatory</b><br/>_______________________", ParagraphStyle("Sig", parent=styles["Normal"], alignment=2, fontName="Helvetica", fontSize=8.5))
+        )
+
         sig_data = [
             [
-                Paragraph("Thank you for choosing DentalCare Pro for your dental health.", cell_style),
-                Paragraph("<b>Authorized Signatory</b><br/><br/>_______________________", ParagraphStyle("Sig", parent=styles["Normal"], alignment=2, fontName="Helvetica", fontSize=8.5)),
+                qr_flow,
+                Paragraph(
+                    "Thank you for choosing DentalCare Pro for your dental health.<br/>"
+                    f"<font size='6.5' color='#94a3b8'>Verification Hash: {actual_hash}</font>",
+                    cell_style,
+                ),
+                auth_sig_cell,
             ]
         ]
-        sig_table = Table(sig_data, colWidths=[320, 203])
+        sig_table = Table(sig_data, colWidths=[60, 260, 203])
         sig_table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "BOTTOM")]))
         story.append(sig_table)
 
@@ -472,3 +501,65 @@ class BillingPDFService:
 
         doc.build(story)
         return buffer.getvalue()
+
+    @staticmethod
+    def generate_thermal_receipt_80mm_pdf(payment: PaymentDetail) -> bytes:
+        """Generates an 80mm compact thermal receipt PDF for POS roll printers."""
+        buffer = BytesIO()
+        # 80mm width = ~226.77 points; continuous length ~500 points
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=(226.77, 500),
+            leftMargin=8,
+            rightMargin=8,
+            topMargin=10,
+            bottomMargin=10,
+        )
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle("TTitle", fontName="Helvetica-Bold", fontSize=10, leading=12, alignment=1)
+        sub_style = ParagraphStyle("TSub", fontName="Helvetica", fontSize=7, leading=9, alignment=1, textColor=colors.HexColor("#334155"))
+        line_style = ParagraphStyle("TLine", fontName="Helvetica", fontSize=7, leading=9)
+        bold_style = ParagraphStyle("TBold", fontName="Helvetica-Bold", fontSize=7.5, leading=10)
+        center_bold = ParagraphStyle("TCenterBold", fontName="Helvetica-Bold", fontSize=11, leading=13, alignment=1)
+
+        story = []
+        clinic_name = payment.clinic_name or "DENTALCARE PRO CLINIC"
+        story.append(Paragraph(f"<b>{clinic_name}</b>", title_style))
+        story.append(Paragraph(f"{payment.clinic_phone or ''} | {payment.clinic_email or ''}", sub_style))
+        story.append(Spacer(1, 4))
+        story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor("#0f766e"), spaceAfter=4))
+
+        story.append(Paragraph("<b>PAYMENT RECEIPT (80mm)</b>", title_style))
+        story.append(Spacer(1, 4))
+
+        meta_rows = [
+            [Paragraph("Receipt #:", line_style), Paragraph(f"<b>{payment.receipt_number}</b>", bold_style)],
+            [Paragraph("Date / Time:", line_style), Paragraph(payment.payment_date.strftime("%d-%b-%Y %H:%M"), line_style)],
+            [Paragraph("Payment Mode:", line_style), Paragraph(f"<b>{payment.method}</b>", bold_style)],
+        ]
+        if payment.transaction_reference:
+            meta_rows.append([Paragraph("Reference #:", line_style), Paragraph(payment.transaction_reference, line_style)])
+
+        t_meta = Table(meta_rows, colWidths=[70, 140])
+        t_meta.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("TOPPADDING", (0, 0), (-1, -1), 1), ("BOTTOMPADDING", (0, 0), (-1, -1), 1)]))
+        story.append(t_meta)
+        story.append(Spacer(1, 4))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#94a3b8"), spaceAfter=4))
+
+        story.append(Paragraph("AMOUNT PAID", sub_style))
+        story.append(Paragraph(f"₹{payment.amount:,.2f}", center_bold))
+        story.append(Spacer(1, 4))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#94a3b8"), spaceAfter=4))
+
+        if payment.notes:
+            story.append(Paragraph(f"Notes: {payment.notes}", line_style))
+            story.append(Spacer(1, 4))
+
+        story.append(Paragraph("Thank you for choosing our dental practice!", sub_style))
+        story.append(Paragraph("Please retain this receipt for your records.", sub_style))
+
+        doc.build(story)
+        return buffer.getvalue()
+
+    generate_payment_receipt_pdf = generate_receipt_pdf

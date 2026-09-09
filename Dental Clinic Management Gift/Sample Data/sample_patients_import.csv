@@ -1,0 +1,11 @@
+Patient_ID,First_Name,Last_Name,DOB,Gender,Phone,Email,Address,Emergency_Contact,Emergency_Phone,Allergies,Medical_Conditions,Insurance_Provider,Policy_Number
+P-10001,Emma,Watson,1988-04-15,Female,+1-555-0101,emma.w@example.com,"742 Evergreen Terrace, Springfield",John Watson,+1-555-0102,Penicillin,None,MetLife Dental,MET-8849201
+P-10002,Robert,Chen,1975-11-23,Male,+1-555-0103,rchen75@example.com,"128 Oak Avenue, Maplewood",Linda Chen,+1-555-0104,Latex,Hypertension,Delta Dental Premier,DEL-3392817
+P-10003,Sophia,Rodriguez,1995-02-18,Female,+1-555-0105,sophia.rod@example.com,"45 Elm Street, Riverdale",Carlos Rodriguez,+1-555-0106,None,Asthma,Cigna Dental Health,CIG-9021844
+P-10004,David,Miller,1962-08-30,Male,+1-555-0107,dmiller@example.com,"89 Pine Ridge Road, Fairview",Sarah Miller,+1-555-0108,"Aspirin, Sulfa",Type 2 Diabetes,Aetna Dental Direct,AET-7712390
+P-10005,Aaliyah,Khan,2001-06-12,Female,+1-555-0109,aaliyah.k@example.com,"312 Sunset Blvd, Lakewood",Tariq Khan,+1-555-0110,None,None,Guardian DentalGuard,GDN-5529104
+P-10006,Lucas,Dubois,2014-09-05,Male,+1-555-0111,parents.dubois@example.com,"55 Highland Way, Greenfield",Marie Dubois (Mother),+1-555-0112,None,Pediatric Patient,United Concordia,UNC-4410293
+P-10007,Elena,Kovalev,1990-12-01,Female,+1-555-0113,elena.k@example.com,"204 Birch Court, Brookfield",Dmitri Kovalev,+1-555-0114,Codeine,None,Humana Dental,HUM-6629184
+P-10008,James,O'Connor,1983-03-27,Male,+1-555-0115,joconnor@example.com,"91 Cedar Lane, Clinton",Patricia O'Connor,+1-555-0116,None,High Cholesterol,Blue Cross Dental,BCB-1192845
+P-10009,Chloe,Bennett,1998-07-19,Female,+1-555-0117,chloe.b@example.com,"67 Meadowbrook Drive, Franklin",Mark Bennett,+1-555-0118,Erythromycin,Mitral Valve Prolapse,Delta Dental PPO,DEL-4482019
+P-10010,Marcus,Vance,1970-10-14,Male,+1-555-0119,mvance@example.com,"154 Orchard Road, Georgetown",Diana Vance,+1-555-0120,None,Mild Sleep Apnea,Principal Dental,PRN-8820194

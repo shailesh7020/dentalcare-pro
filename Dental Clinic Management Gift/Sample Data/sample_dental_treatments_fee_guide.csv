@@ -1,0 +1,29 @@
+CDT_Code,Category,Procedure_Name,Standard_Fee_USD,Typical_Duration_Min,Tooth_Specific,Requires_Radiograph
+D0120,Diagnostic,Periodic Oral Evaluation - Established Patient,65.00,20,No,No
+D0140,Diagnostic,Limited Oral Evaluation - Problem Focused (Emergency),95.00,25,Optional,Yes
+D0150,Diagnostic,Comprehensive Oral Evaluation - New Patient,110.00,45,No,Yes
+D0210,Diagnostic,Intraoral - Complete Series of Radiographic Images (FMX),160.00,20,No,Yes
+D0220,Diagnostic,Intraoral - Periapical First Radiographic Image,35.00,10,Yes,Yes
+D0274,Diagnostic,Bitewings - Four Radiographic Images,75.00,15,No,Yes
+D0330,Diagnostic,Panoramic Radiographic Image (Orthopantomogram),140.00,15,No,Yes
+D1110,Preventive,Prophylaxis - Adult Routine Cleaning,105.00,45,No,No
+D1120,Preventive,Prophylaxis - Child Routine Cleaning,75.00,30,No,No
+D1206,Preventive,Topical Application of Fluoride Varnish,45.00,10,No,No
+D1351,Preventive,Sealant - Per Tooth (Resin Application),55.00,15,Yes,No
+D2140,Restorative,"Amalgam - One Surface, Primary or Permanent",145.00,30,Yes,No
+D2150,Restorative,"Amalgam - Two Surfaces, Primary or Permanent",185.00,40,Yes,No
+D2391,Restorative,"Resin-Based Composite - One Surface, Posterior",175.00,35,Yes,No
+D2392,Restorative,"Resin-Based Composite - Two Surfaces, Posterior",225.00,45,Yes,No
+D2393,Restorative,"Resin-Based Composite - Three Surfaces, Posterior",275.00,50,Yes,No
+D2740,Restorative,Crown - Porcelain / Ceramic Substrate (All-Ceramic),1150.00,60,Yes,Yes
+D2750,Restorative,Crown - Porcelain Fused to High Noble Metal (PFM),1050.00,60,Yes,Yes
+D3310,Endodontics,Endodontic Therapy - Anterior Tooth (Excluding Final Restoration),750.00,60,Yes,Yes
+D3320,Endodontics,Endodontic Therapy - Premolar Tooth,875.00,75,Yes,Yes
+D3330,Endodontics,Endodontic Therapy - Molar Tooth,1100.00,90,Yes,Yes
+D4341,Periodontics,Periodontal Scaling & Root Planing - Per Quadrant,260.00,50,No,Yes
+D4910,Periodontics,Periodontal Maintenance,145.00,45,No,No
+D7140,Oral Surgery,"Extraction, Erupted Tooth or Exposed Root",185.00,30,Yes,Yes
+D7210,Oral Surgery,Surgical Removal of Erupted Tooth Requiring Bone Removal,325.00,45,Yes,Yes
+D7240,Oral Surgery,Removal of Impacted Tooth - Completely Bony,495.00,60,Yes,Yes
+D9110,Emergency,Palliative (Emergency) Treatment of Dental Pain - Minor,95.00,20,Yes,No
+D9944,Adjunctive,"Occlusal Guard - Hard Appliance, Full Arch (Night Guard)",550.00,30,No,No

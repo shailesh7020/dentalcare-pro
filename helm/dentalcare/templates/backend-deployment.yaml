@@ -69,4 +69,9 @@ spec:
         - name: tmp-volume
           emptyDir: {}
         - name: storage-volume
+          {{- if .Values.storage.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "dentalcare.fullname" . }}-storage-pvc
+          {{- else }}
           emptyDir: {}
+          {{- end }}

@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql as pg
 
 revision = "20260908_0005"
 down_revision = "20260908_0004"
@@ -33,19 +34,21 @@ def audit_columns() -> list[sa.Column]:
 
 def upgrade() -> None:
     # 1. Enums
-    treatment_status = sa.Enum(
+    treatment_status = pg.ENUM(
         "PLANNED",
         "IN_PROGRESS",
         "COMPLETED",
         "CANCELLED",
         "ON_HOLD",
         name="treatment_status",
+        create_type=False,
     )
-    follow_up_status = sa.Enum(
+    follow_up_status = pg.ENUM(
         "SCHEDULED",
         "COMPLETED",
         "CANCELLED",
         name="treatment_follow_up_status",
+        create_type=False,
     )
 
     bind = op.get_bind()

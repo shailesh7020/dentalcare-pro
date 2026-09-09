@@ -7,12 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
+from app.dependencies.auth import current_user
 from app.models.hr import (
     ApplicantStage,
     EmployeeStatus,
     JobStatus,
     LeaveStatus,
 )
+from app.models.identity import Role
 from app.schemas.hr import (
     AttendanceRecordResponse,
     BurnoutRiskAssessmentResponse,
@@ -57,7 +59,12 @@ from app.schemas.hr import (
 from app.services.ai.workforce_ai_service import WorkforceAIService
 from app.services.hr_service import HRService
 
-router = APIRouter(prefix="/hr", tags=["Human Resources & Workforce Management"])
+router = APIRouter(
+    prefix="/hr",
+    tags=["Human Resources & Workforce Management"],
+    dependencies=[Depends(current_user)],
+)
+HR_ADMIN_ROLES = (Role.SUPER_ADMIN, Role.CLINIC_ADMIN)
 
 
 # ---------------------------------------------------------

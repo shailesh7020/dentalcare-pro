@@ -1,0 +1,16 @@
+Item_Code,Item_Description,Category,Unit,Quantity_In_Stock,Reorder_Threshold,Unit_Cost_USD,Supplier,Batch_No,Expiry_Date
+SUP-001,"2% Lidocaine HCl with 1:100,000 Epinephrine (50/bx)",Anesthetics,Box,24,8,48.50,Septodont Inc.,LID-2026-A,2028-06-30
+SUP-002,"4% Articaine HCl with 1:100,000 Epinephrine (50/bx)",Anesthetics,Box,18,6,62.00,Septodont Inc.,ART-2026-C,2028-03-31
+SUP-003,"Nitrile Exam Gloves - Powder-Free (Medium, 100/bx)",PPE & Infection Control,Box,85,20,11.25,Halyard Health,GLV-9921-M,2030-12-31
+SUP-004,"Nitrile Exam Gloves - Powder-Free (Large, 100/bx)",PPE & Infection Control,Box,60,15,11.25,Halyard Health,GLV-9922-L,2030-12-31
+SUP-005,Filtek Supreme Ultra Universal Composite A2 Syringe,Restorative,Each,14,5,84.00,3M ESPE,CMP-3M-A2,2027-11-15
+SUP-006,Filtek Supreme Ultra Universal Composite A3 Syringe,Restorative,Each,12,5,84.00,3M ESPE,CMP-3M-A3,2027-11-15
+SUP-007,Single Bond Universal Adhesive 5ml Bottle,Restorative,Bottle,8,3,115.00,3M ESPE,ADH-8831-U,2027-08-30
+SUP-008,Phosphoric Acid 37% Etching Gel (4x 1.2ml Syringes),Restorative,Pack,15,4,26.50,Ultradent,ETC-3741-G,2028-01-31
+SUP-009,Kromopan Fast-Set Dust-Free Alginate (500g Bag),Impression,Bag,30,10,18.75,Lascod Spa,ALG-5502-K,2029-05-31
+SUP-010,Dental Needles 27G Long (100/bx),Disposable,Box,22,8,16.00,Terumo Medical,NDL-27G-L,2029-09-30
+SUP-011,Dental Needles 30G Short (100/bx),Disposable,Box,20,8,16.00,Terumo Medical,NDL-30G-S,2029-09-30
+SUP-012,Dental Patient Bibs 3-Ply Waterproof (500/case),Disposable,Case,12,4,38.00,Crosstex,BIB-500-BL,2031-12-31
+SUP-013,"Steri-Pouches Self-Seal 3.5"" x 9"" (200/bx)",Sterilization,Box,40,12,14.50,Medicom Safe-Seal,STP-359-M,2031-06-30
+SUP-014,Microbrush Applicators Regular Tip (400/pack),Disposable,Pack,16,5,29.90,Microbrush Corp,MBR-400-R,2030-10-31
+SUP-015,Prophy Paste Mint Medium with Fluoride (200 cups/bx),Preventive,Box,15,5,34.00,Premier Dental,PRP-200-M,2028-04-30

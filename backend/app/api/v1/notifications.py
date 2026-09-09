@@ -262,3 +262,15 @@ async def trigger_followup_recalls(
         raise HTTPException(status_code=400, detail="Clinic context required.")
     followup_svc = FollowUpRecallService(db)
     return await followup_svc.scan_and_send_followups(actor.clinic_id)
+
+
+@router.post("/run-missed-followups", response_model=ReminderProcessResult)
+async def trigger_missed_appointment_followups(
+    actor: User = Depends(require_roles(*STAFF_ROLES)),
+    db: AsyncSession = Depends(get_db),
+) -> ReminderProcessResult:
+    if not actor.clinic_id:
+        raise HTTPException(status_code=400, detail="Clinic context required.")
+    reminder_svc = AppointmentReminderService(db)
+    return await reminder_svc.process_missed_appointment_followups(actor.clinic_id)
+

@@ -59,27 +59,39 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         final data = response.data;
+        final assignedRole = data['role'] ?? _selectedRole;
         await widget.secureStorage.saveTokens(
-          accessToken: data['access_token'] ?? 'mock_token',
-          refreshToken: data['refresh_token'] ?? 'mock_refresh',
-          userRole: _selectedRole,
+          accessToken: data['access_token'],
+          refreshToken: data['refresh_token'],
+          userRole: assignedRole,
           userId: data['user_id'] ?? 'user-1',
           clinicId: data['clinic_id'],
         );
 
-        _navigateToRoleHome(_selectedRole);
+        _navigateToRoleHome(assignedRole);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid email or password. Please try again.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       }
-    } catch (_) {
-      // Fallback demo authentication for testing without live connection
-      await widget.secureStorage.saveTokens(
-        accessToken: 'mock_jwt_access_token',
-        refreshToken: 'mock_jwt_refresh_token',
-        userRole: _selectedRole,
-        userId: 'usr-100',
-      );
-      _navigateToRoleHome(_selectedRole);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Authentication failed: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

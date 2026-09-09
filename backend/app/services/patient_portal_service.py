@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -11,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.billing import Invoice, InvoiceStatus
-from app.models.identity import Clinic, Role, User
+from app.models.identity import Clinic, RefreshToken, Role, User
 from app.models.notification import DeliveryChannel, NotificationPriority, NotificationType
 from app.models.odontogram import Tooth
 from app.models.patient import Patient, PatientDocument
@@ -90,7 +89,16 @@ class PatientPortalService:
         self.db.add(user)
         await self.db.flush()
 
-        refresh_token, _, _ = create_refresh_token()
+        refresh_token, refresh_hash, expires_at = create_refresh_token()
+        self.db.add(
+            RefreshToken(
+                id=uuid4(),
+                user_id=user.id,
+                token_hash=refresh_hash,
+                expires_at=expires_at,
+                family_id=uuid4(),
+            )
+        )
         access_token = create_access_token(str(user.id), str(clinic.id), user.role.value)
         await self.db.commit()
 
@@ -99,7 +107,10 @@ class PatientPortalService:
     async def authenticate_portal_user(self, email: str, password: str) -> tuple[TokenPair, User]:
         stmt = select(User).where(User.email == email, User.deleted_at.is_(None))
         user = await self.db.scalar(stmt)
-        if not user or not verify_password(password, user.password_hash):
+        is_valid_pw = False
+        if user and user.is_active:
+            is_valid_pw = await asyncio.to_thread(verify_password, password, user.password_hash)
+        if not user or not user.is_active or not is_valid_pw:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password."
             )
@@ -110,7 +121,16 @@ class PatientPortalService:
             )
 
         user.last_login_at = datetime.now(UTC)
-        refresh_token, _, _ = create_refresh_token()
+        refresh_token, refresh_hash, expires_at = create_refresh_token()
+        self.db.add(
+            RefreshToken(
+                id=uuid4(),
+                user_id=user.id,
+                token_hash=refresh_hash,
+                expires_at=expires_at,
+                family_id=uuid4(),
+            )
+        )
         access_token = create_access_token(str(user.id), str(user.clinic_id), user.role.value)
         await self.db.commit()
 

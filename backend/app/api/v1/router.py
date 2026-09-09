@@ -2,9 +2,11 @@ from fastapi import APIRouter
 
 from app.api import health
 from app.api.v1 import (
+    admin_settings,
     ai,
     appointments,
     auth,
+    backups,
     billing,
     calendar,
     chairs,
@@ -12,17 +14,22 @@ from app.api.v1 import (
     communications,
     consents_forms,
     dentists,
+    documents,
     enterprise,
     hr,
     insurance,
     inventory,
     mobile,
+    network,
     notifications,
     odontogram,
     patients,
     portal,
     prescriptions,
+    remote,
+    signatures,
     treatments,
+    updates,
     users,
 )
 
@@ -50,3 +57,11 @@ api_router.include_router(insurance.router)
 api_router.include_router(enterprise.router)
 api_router.include_router(hr.router)
 api_router.include_router(mobile.router)
+api_router.include_router(signatures.router)
+api_router.include_router(backups.router)
+api_router.include_router(updates.router)
+api_router.include_router(documents.router)
+api_router.include_router(network.router)
+api_router.include_router(admin_settings.router)
+api_router.include_router(remote.router)
+

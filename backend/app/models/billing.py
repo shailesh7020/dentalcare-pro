@@ -86,14 +86,14 @@ class Invoice(Base, UUIDAuditMixin):
     date: Mapped[date] = mapped_column(Date, nullable=False)
     due_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[InvoiceStatus] = mapped_column(
-        Enum(InvoiceStatus, name="invoice_status"),
+        Enum(InvoiceStatus, name="invoice_status", native_enum=False),
         default=InvoiceStatus.UNPAID,
         nullable=False,
     )
 
     subtotal: Mapped[float] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)
     discount_type: Mapped[DiscountType] = mapped_column(
-        Enum(DiscountType, name="discount_type"),
+        Enum(DiscountType, name="discount_type", native_enum=False),
         default=DiscountType.FIXED,
         nullable=False,
     )
@@ -140,7 +140,7 @@ class InvoiceItem(Base, UUIDAuditMixin):
         ForeignKey("invoices.id", ondelete="CASCADE"), index=True, nullable=False
     )
     item_type: Mapped[InvoiceItemType] = mapped_column(
-        Enum(InvoiceItemType, name="invoice_item_type"),
+        Enum(InvoiceItemType, name="invoice_item_type", native_enum=False),
         default=InvoiceItemType.PROCEDURE,
         nullable=False,
     )
@@ -171,7 +171,7 @@ class Payment(Base, UUIDAuditMixin):
     payment_date: Mapped[date] = mapped_column(Date, nullable=False)
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     method: Mapped[PaymentMethod] = mapped_column(
-        Enum(PaymentMethod, name="payment_method"),
+        Enum(PaymentMethod, name="payment_method", native_enum=False),
         default=PaymentMethod.CASH,
         nullable=False,
     )
@@ -180,7 +180,7 @@ class Payment(Base, UUIDAuditMixin):
     received_by: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     status: Mapped[PaymentStatus] = mapped_column(
-        Enum(PaymentStatus, name="payment_status"),
+        Enum(PaymentStatus, name="payment_status", native_enum=False),
         default=PaymentStatus.COMPLETED,
         nullable=False,
     )

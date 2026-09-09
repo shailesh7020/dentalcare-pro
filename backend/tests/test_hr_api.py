@@ -474,3 +474,10 @@ async def test_api_ai_workforce_endpoints():
     # 5. Training compliance
     compliance = await audit_ai_training_compliance(clinic_id=clinic_id, db=db)  # type: ignore
     assert hasattr(compliance, "total_compliance_alerts")
+
+
+def test_hr_router_enforces_authentication():
+    from app.api.v1.hr import router
+    from app.dependencies.auth import current_user
+    dependency_callables = [d.dependency for d in router.dependencies]
+    assert current_user in dependency_callables

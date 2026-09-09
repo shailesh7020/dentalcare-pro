@@ -97,3 +97,16 @@ networkPolicy:
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+
+secrets:
+  databaseUrl: ""
+  redisUrl: ""
+  secretKey: ""
+  jwtSecret: ""
+
+storage:
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 20Gi
+    storageClass: ""

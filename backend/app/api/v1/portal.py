@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.dependencies.auth import current_user
+from app.dependencies.rate_limit import rate_limit
 from app.models.identity import Role, User
 from app.models.patient import Patient
 from app.schemas.communication import ConversationRead, MessageCreate, MessageRead
@@ -53,6 +54,7 @@ def require_patient(user: User = Depends(current_user)) -> User:
 @router.post("/auth/register", response_model=PortalLoginResponse, status_code=status.HTTP_201_CREATED)
 async def portal_register(
     payload: PortalRegisterRequest,
+    _: None = Depends(rate_limit("portal_register", "login_rate_limit")),
     db: AsyncSession = Depends(get_db),
 ) -> PortalLoginResponse:
     portal_svc = PatientPortalService(db)
@@ -76,6 +78,7 @@ async def portal_register(
 @router.post("/auth/login", response_model=PortalLoginResponse)
 async def portal_login(
     payload: PortalLoginRequest,
+    _: None = Depends(rate_limit("portal_login", "login_rate_limit")),
     db: AsyncSession = Depends(get_db),
 ) -> PortalLoginResponse:
     portal_svc = PatientPortalService(db)

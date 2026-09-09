@@ -44,6 +44,7 @@ def perform_backup(target_dir=None):
         pg_dump = "pg_dump"
         # Standard PostgreSQL search paths
         for p in [
+            r"C:\Program Files\PostgreSQL\18\bin\pg_dump.exe",
             r"C:\Program Files\PostgreSQL\17\bin\pg_dump.exe",
             r"C:\Program Files\PostgreSQL\16\bin\pg_dump.exe",
             r"C:\Program Files\PostgreSQL\15\bin\pg_dump.exe",
@@ -80,6 +81,7 @@ def perform_restore(backup_path):
     try:
         psql = "psql"
         for p in [
+            r"C:\Program Files\PostgreSQL\18\bin\psql.exe",
             r"C:\Program Files\PostgreSQL\17\bin\psql.exe",
             r"C:\Program Files\PostgreSQL\16\bin\psql.exe",
             r"C:\Program Files\PostgreSQL\15\bin\psql.exe",
@@ -117,6 +119,7 @@ def check_daily_schedule():
 def main():
     parser = argparse.ArgumentParser(description="DentalCare Pro Backup Utility")
     parser.add_argument("--backup", action="store_true", help="Perform manual database backup")
+    parser.add_argument("--dest", type=str, help="Destination directory for backup")
     parser.add_argument("--restore", type=str, help="Restore database from specified backup file")
     parser.add_argument("--daily-schedule", action="store_true", help="Check and perform daily automated backup")
     parser.add_argument("--export-sql", type=str, help="Export SQL dump to specified file path")
@@ -124,7 +127,7 @@ def main():
     args = parser.parse_args()
 
     if args.backup:
-        perform_backup()
+        perform_backup(target_dir=args.dest)
     elif args.restore:
         perform_restore(args.restore)
     elif args.daily_schedule:

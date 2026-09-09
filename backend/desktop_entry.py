@@ -48,7 +48,7 @@ logger.addHandler(console_handler)
 def load_desktop_configuration() -> dict:
     """Load or generate production configuration for desktop runtime."""
     defaults = {
-        "ENVIRONMENT": "production",
+        "ENVIRONMENT": "development",
         "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/dentalcare",
         "SECRET_KEY": secrets.token_urlsafe(32),
         "JWT_SECRET": secrets.token_urlsafe(32),
@@ -115,7 +115,7 @@ def run_health_check() -> dict:
     try:
         import urllib.request
         port = os.environ.get("PORT", 8000)
-        req = urllib.request.Request(f"http://127.0.0.1:{port}/api/health", headers={"User-Agent": "DentalCarePro-Desktop"})
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/api/v1/health/live", headers={"User-Agent": "DentalCarePro-Desktop"})
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read().decode())
             status["server"] = "running"

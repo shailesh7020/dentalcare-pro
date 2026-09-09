@@ -33,7 +33,7 @@ jobs:
           node-version: 22
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web lint || true
+      - run: pnpm --filter web build
 
   # ==============================================================================
   # Stage 2: Unit Testing (Backend, Frontend, Mobile)

@@ -1,0 +1,26 @@
+======================================================================
+  DENTALCARE PRO - APPOINTMENT SMS & WHATSAPP MESSAGE TEMPLATES
+======================================================================
+
+You can copy and paste these pre-formatted message scripts into your
+clinic phone or messaging software for patient communications.
+
+1. APPOINTMENT CONFIRMATION (Immediately Upon Booking):
+----------------------------------------------------------------------
+"Dear [Patient Name], your dental appointment at [Clinic Name] is confirmed for [Day], [Date] at [Time] with [Doctor Name]. If you need to reschedule, please call us at [Clinic Phone]. We look forward to seeing you!"
+
+2. 24-HOUR REMINDER MESSAGE (Sent 1 Day Prior):
+----------------------------------------------------------------------
+"Reminder: You have a dental appointment scheduled tomorrow, [Date] at [Time] at [Clinic Name]. Please reply YES to confirm or call [Clinic Phone] to adjust your time. Please remember to bring your insurance card."
+
+3. 2-HOUR SAME-DAY ARRIVAL NOTICE:
+----------------------------------------------------------------------
+"Hi [Patient Name], your dental visit with [Doctor Name] is today at [Time]. We are located at [Clinic Address]. Parking is available on-site. See you soon!"
+
+4. POST-OPERATIVE CARE CHECK-IN (Day After Treatment / Extraction):
+----------------------------------------------------------------------
+"Dear [Patient Name], [Doctor Name] and the team at [Clinic Name] hope you are recovering comfortably from your procedure yesterday. Remember to follow your post-care instructions. If you experience unexpected discomfort or bleeding, call our emergency line at [Emergency Phone]."
+
+5. 6-MONTH ROUTINE RECALL & HYGIENE CHECKUP:
+----------------------------------------------------------------------
+"Hi [Patient Name], it's time for your 6-month routine dental cleaning and checkup at [Clinic Name]! Maintaining your oral health keeps your smile bright. Call [Clinic Phone] or reply to this message to book your convenient time slot."

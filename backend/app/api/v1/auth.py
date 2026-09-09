@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -60,11 +61,10 @@ async def login(
     user = await db.scalar(
         select(User).where(User.email == payload.email, User.deleted_at.is_(None))
     )
-    if (
-        user is None
-        or not user.is_active
-        or not verify_password(payload.password, user.password_hash)
-    ):
+    is_valid_pw = False
+    if user and user.is_active:
+        is_valid_pw = await asyncio.to_thread(verify_password, payload.password, user.password_hash)
+    if not user or not user.is_active or not is_valid_pw:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
@@ -115,7 +115,7 @@ async def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token replay detected"
         )
     user = await db.get(User, refresh.user_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is unavailable")
     refresh.revoked_at = datetime.now(UTC)
     token_pair = await issue_tokens(user, db, refresh.family_id)

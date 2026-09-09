@@ -33,17 +33,32 @@ async def seed() -> None:
             Role.ASSISTANT,
         ]
         for role in roles:
-            email = f"{role.value.lower()}@dentalcare.local"
-            existing = await db.scalar(select(User).where(User.email == email))
+            for domain in ["dentalcare.local", "dentalcare.com"]:
+                email = f"{role.value.lower()}@{domain}"
+                existing = await db.scalar(select(User).where(User.email == email))
+                if existing is None:
+                    db.add(
+                        User(
+                            clinic_id=None if role == Role.SUPER_ADMIN else clinic.id,
+                            email=email,
+                            password_hash=hash_password(password),
+                            first_name=role.value.replace("_", " ").title(),
+                            last_name="Demo",
+                            role=role,
+                        )
+                    )
+        # Convenience alias for admin@dentalcare.com and admin@dentalcarepro.com
+        for alias in ["admin@dentalcare.com", "admin@dentalcare.local", "admin@dentalcarepro.com"]:
+            existing = await db.scalar(select(User).where(User.email == alias))
             if existing is None:
                 db.add(
                     User(
-                        clinic_id=None if role == Role.SUPER_ADMIN else clinic.id,
-                        email=email,
+                        clinic_id=clinic.id,
+                        email=alias,
                         password_hash=hash_password(password),
-                        first_name=role.value.replace("_", " ").title(),
+                        first_name="Admin",
                         last_name="Demo",
-                        role=role,
+                        role=Role.CLINIC_ADMIN,
                     )
                 )
 

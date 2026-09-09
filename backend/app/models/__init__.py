@@ -28,6 +28,13 @@ from app.models.billing import (
     PaymentMethod,
     PaymentStatus,
 )
+from app.models.commercial import (
+    BackupDestination,
+    BackupRecord,
+    BackupStatus,
+    BackupType,
+    ClinicianSignature,
+)
 from app.models.communication import (
     Conversation,
     ConversationParticipant,
@@ -184,6 +191,11 @@ from app.models.prescription import (
     PrescriptionTemplate,
     TemplateCategory,
 )
+from app.models.remote import (
+    ClinicRemoteConfig,
+    RemoteSession,
+    TwoFactorSecret,
+)
 from app.models.treatment import (
     FollowUpStatus,
     Treatment,
@@ -212,6 +224,10 @@ __all__ = [
     "AttendanceRecord",
     "AttendanceStatus",
     "AuditEvent",
+    "BackupDestination",
+    "BackupRecord",
+    "BackupStatus",
+    "BackupType",
     "Base",
     "BatchStatus",
     "BloodGroup",
@@ -221,6 +237,7 @@ __all__ = [
     "ClaimStatus",
     "Clinic",
     "ClinicNotificationSetting",
+    "ClinicianSignature",
     "ConsentRecord",
     "Conversation",
     "ConversationParticipant",

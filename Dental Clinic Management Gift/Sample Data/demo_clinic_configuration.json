@@ -1,0 +1,94 @@
+{
+  "clinic_info": {
+    "name": "Family Dental & Implant Care Center",
+    "tagline": "Gentle, State-of-the-Art Dentistry for the Entire Family",
+    "license_number": "DENT-LIC-2026-9812",
+    "tax_identification": "XX-XXXXXXX",
+    "address": {
+      "street": "Suite 400, Healthcare Pavilion, 1200 Wellness Parkway",
+      "city": "Metropolis",
+      "state_province": "NY",
+      "postal_code": "10001",
+      "country": "United States"
+    },
+    "contact": {
+      "phone": "+1 (555) 234-CARE (2273)",
+      "emergency_phone": "+1 (555) 999-DENT",
+      "email": "reception@familydentalcare.com",
+      "website": "https://www.familydentalcare.com"
+    }
+  },
+  "practice_settings": {
+    "currency_symbol": "$",
+    "currency_code": "USD",
+    "date_format": "YYYY-MM-DD",
+    "time_format": "12_HOUR",
+    "default_appointment_duration_min": 30,
+    "patient_recall_interval_months": 6,
+    "operatory_rooms": [
+      {
+        "id": "OP-1",
+        "name": "Operatory 1 - Hygiene & Recall",
+        "chair_model": "A-dec 500",
+        "active": true
+      },
+      {
+        "id": "OP-2",
+        "name": "Operatory 2 - Restorative Care",
+        "chair_model": "A-dec 500",
+        "active": true
+      },
+      {
+        "id": "OP-3",
+        "name": "Operatory 3 - Endodontics & Surgery",
+        "chair_model": "Planmeca Compact",
+        "active": true
+      },
+      {
+        "id": "OP-4",
+        "name": "Operatory 4 - Pediatric Care",
+        "chair_model": "Pelton & Crane",
+        "active": true
+      }
+    ],
+    "operating_hours": {
+      "monday": {
+        "open": "08:30",
+        "close": "17:30"
+      },
+      "tuesday": {
+        "open": "08:30",
+        "close": "17:30"
+      },
+      "wednesday": {
+        "open": "08:30",
+        "close": "17:30"
+      },
+      "thursday": {
+        "open": "08:30",
+        "close": "17:30"
+      },
+      "friday": {
+        "open": "08:30",
+        "close": "16:00"
+      },
+      "saturday": {
+        "open": "09:00",
+        "close": "13:00"
+      },
+      "sunday": {
+        "closed": true
+      }
+    },
+    "tax_rates": {
+      "dental_services": 0.0,
+      "oral_hygiene_products": 0.05
+    }
+  },
+  "system_preferences": {
+    "automated_daily_backup_hour": 23,
+    "backup_retention_days": 90,
+    "inactivity_lock_timeout_min": 15,
+    "sound_alerts_enabled": true
+  }
+}

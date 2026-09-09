@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,14 +16,15 @@ import {
   UserPlus,
   Users,
   X,
+  Filter,
 } from "lucide-react";
-import { useState } from "react";
-
 import { api } from "@/lib/api";
 import { useAuthSession } from "../auth-session";
+import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type Patient = {
   id: string;
@@ -143,60 +145,67 @@ export default function PatientsPage() {
     return (
       <main className="session-loading">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-600 text-sm font-medium">Verifying clinic session...</p>
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">
+            Verifying clinic session...
+          </p>
         </div>
       </main>
     );
   }
 
   const total = data?.total ?? 0;
-  const startIdx = page * pageSize + 1;
+  const startIdx = total === 0 ? 0 : page * pageSize + 1;
   const endIdx = Math.min((page + 1) * pageSize, total);
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-16">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-emerald-900 text-emerald-50 rounded-lg shadow-lg border border-emerald-700 animate-in slide-in-from-top duration-300">
-          <CheckCircle2 size={18} className="text-emerald-400" />
-          <span className="text-sm font-medium">{toastMessage}</span>
-        </div>
-      )}
+    <AppShell>
+      <div className="space-y-6">
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-emerald-900 text-emerald-50 rounded-2xl shadow-xl border border-emerald-700 animate-in slide-in-from-top duration-300">
+            <CheckCircle2 size={18} className="text-emerald-400" />
+            <span className="text-sm font-medium">{toastMessage}</span>
+          </div>
+        )}
 
-      {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        {/* Breadcrumb & Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
+        {/* Header Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded">
-              Patient Management Module
-            </span>
-            <h1 className="text-2xl font-bold text-slate-900 mt-1.5 flex items-center gap-2">
-              <Users size={24} className="text-teal-700" /> Clinic Patients
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-900/60">
+                Patient Management
+              </span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">•</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {total} Registered Patients
+              </span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+              <Users size={26} className="text-blue-600 dark:text-blue-400" /> Clinic Patients Directory
             </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Comprehensive electronic health records, clinical histories, and patient directory.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Comprehensive electronic health records, clinical charts, and medical histories.
             </p>
           </div>
+
           <div className="flex items-center gap-3">
-            <Link
-              href="/patients/new"
-              className="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs px-4 py-2.5 rounded-md shadow-sm transition-colors"
-            >
-              <UserPlus size={16} /> Register Patient
+            <Link href="/patients/new">
+              <Button variant="primary" size="md" leftIcon={<UserPlus size={16} />}>
+                Register Patient
+              </Button>
             </Link>
           </div>
         </div>
 
         {/* Search and Filters Bar */}
-        <section className="bg-white p-4 rounded-lg border border-slate-200 shadow-xs mt-6 mb-4">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
             {/* Search Input */}
             <div className="relative flex-1 max-w-md">
               <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
               />
               <input
                 type="text"
@@ -206,7 +215,7 @@ export default function PatientsPage() {
                   setPage(0);
                 }}
                 placeholder="Search patient name, number, mobile, email..."
-                className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 text-slate-900"
+                className="w-full pl-10 pr-9 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-slate-900 dark:text-slate-100 transition-all placeholder:text-slate-400"
               />
               {search && (
                 <button
@@ -214,7 +223,7 @@ export default function PatientsPage() {
                     setSearch("");
                     setPage(0);
                   }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
                   <X size={14} />
                 </button>
@@ -229,7 +238,7 @@ export default function PatientsPage() {
                   setStatusFilter(e.target.value as "active" | "archived" | "all");
                   setPage(0);
                 }}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-md px-2.5 py-2 text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="active">Active Only</option>
                 <option value="archived">Archived Records</option>
@@ -242,7 +251,7 @@ export default function PatientsPage() {
                   setGenderFilter(e.target.value);
                   setPage(0);
                 }}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-md px-2.5 py-2 text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">All Genders</option>
                 <option value="FEMALE">Female</option>
@@ -257,7 +266,7 @@ export default function PatientsPage() {
                   setBloodGroupFilter(e.target.value);
                   setPage(0);
                 }}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-md px-2.5 py-2 text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+                className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">All Blood Groups</option>
                 <option value="A+">A+</option>
@@ -273,59 +282,59 @@ export default function PatientsPage() {
               {(search || statusFilter !== "active" || genderFilter || bloodGroupFilter) && (
                 <button
                   onClick={clearFilters}
-                  className="text-xs text-slate-500 hover:text-slate-800 underline px-2 py-1"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline px-2 py-1 cursor-pointer"
                 >
                   Clear filters
                 </button>
               )}
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Patient Table */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+        {/* Patient Table Container */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-semibold text-slate-600">
-                  <th className="py-3 px-4">
+                <tr className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">
                     <button
                       onClick={() => handleSort("patient_number")}
-                      className="flex items-center gap-1.5 hover:text-teal-700"
+                      className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
                     >
                       Patient Number <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="py-3 px-4">
+                  <th className="py-3.5 px-4">
                     <button
                       onClick={() => handleSort("name")}
-                      className="flex items-center gap-1.5 hover:text-teal-700"
+                      className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
                     >
                       Patient Name <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="py-3 px-4">
+                  <th className="py-3.5 px-4">
                     <button
                       onClick={() => handleSort("mobile_number")}
-                      className="flex items-center gap-1.5 hover:text-teal-700"
+                      className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
                     >
                       Mobile <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="py-3 px-4">
+                  <th className="py-3.5 px-4">
                     <button
                       onClick={() => handleSort("date_of_birth")}
-                      className="flex items-center gap-1.5 hover:text-teal-700"
+                      className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
                     >
                       Age / Gender <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="py-3 px-4">Blood Group</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3.5 px-4">Blood Group</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
                 {isLoading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i}>
@@ -344,7 +353,7 @@ export default function PatientsPage() {
                       <p className="font-semibold">Unable to fetch patient records.</p>
                       <button
                         onClick={() => void refetch()}
-                        className="mt-2 text-xs text-teal-700 underline"
+                        className="mt-2 text-xs text-blue-600 underline cursor-pointer"
                       >
                         Try again
                       </button>
@@ -365,9 +374,9 @@ export default function PatientsPage() {
                     return (
                       <tr
                         key={patient.id}
-                        className="hover:bg-slate-50/70 transition-colors"
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                       >
-                        <td className="py-3.5 px-4 font-mono font-medium text-teal-700">
+                        <td className="py-3.5 px-4 font-mono font-medium text-blue-600 dark:text-blue-400">
                           <Link
                             href={`/patients/${patient.id}`}
                             className="hover:underline flex items-center gap-1.5"
@@ -375,7 +384,7 @@ export default function PatientsPage() {
                             {patient.patient_number}
                           </Link>
                         </td>
-                        <td className="py-3.5 px-4 font-medium text-slate-900">
+                        <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">
                           <Link href={`/patients/${patient.id}`} className="hover:underline">
                             {fullName}
                           </Link>
@@ -404,14 +413,14 @@ export default function PatientsPage() {
                           {isArchived ? (
                             <Badge variant="archived">Archived</Badge>
                           ) : (
-                            <Badge variant="active">Active</Badge>
+                            <Badge variant="active" dot>Active</Badge>
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Link
                               href={`/patients/${patient.id}`}
-                              className="p-1.5 text-slate-500 hover:text-teal-700 hover:bg-slate-100 rounded"
+                              className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                               title="View Patient Profile"
                             >
                               <Eye size={15} />
@@ -419,7 +428,7 @@ export default function PatientsPage() {
                             {!isArchived && (
                               <Link
                                 href={`/patients/${patient.id}/edit`}
-                                className="p-1.5 text-slate-500 hover:text-blue-700 hover:bg-slate-100 rounded"
+                                className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                                 title="Edit Patient"
                               >
                                 <Edit2 size={15} />
@@ -429,7 +438,7 @@ export default function PatientsPage() {
                               <button
                                 onClick={() => restoreMutation.mutate(patient.id)}
                                 disabled={restoreMutation.isPending}
-                                className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-slate-100 rounded"
+                                className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                                 title="Restore Patient"
                               >
                                 <RotateCcw size={15} />
@@ -437,7 +446,7 @@ export default function PatientsPage() {
                             ) : (
                               <button
                                 onClick={() => setSelectedPatientForArchive(patient)}
-                                className="p-1.5 text-slate-500 hover:text-rose-700 hover:bg-slate-100 rounded"
+                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                                 title="Archive Patient"
                               >
                                 <Archive size={15} />
@@ -450,10 +459,10 @@ export default function PatientsPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={7} className="py-16 text-center text-slate-500">
+                    <td colSpan={7} className="py-16 text-center text-slate-500 dark:text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <Users size={32} className="text-slate-300" />
-                        <p className="font-semibold text-slate-700 text-sm">
+                        <Users size={36} className="text-slate-300 dark:text-slate-600" />
+                        <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">
                           {search || genderFilter || bloodGroupFilter || statusFilter !== "active"
                             ? "No patients match the selected search or filters."
                             : "No patients registered yet."}
@@ -466,16 +475,15 @@ export default function PatientsPage() {
                         {search || genderFilter || bloodGroupFilter ? (
                           <button
                             onClick={clearFilters}
-                            className="mt-2 text-xs font-semibold text-teal-700 hover:underline"
+                            className="mt-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                           >
                             Reset filters
                           </button>
                         ) : (
-                          <Link
-                            href="/patients/new"
-                            className="mt-3 inline-flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white font-medium text-xs px-3.5 py-2 rounded-md"
-                          >
-                            <UserPlus size={14} /> Register Patient
+                          <Link href="/patients/new" className="mt-3">
+                            <Button variant="primary" size="sm" leftIcon={<UserPlus size={14} />}>
+                              Register Patient
+                            </Button>
                           </Link>
                         )}
                       </div>
@@ -487,36 +495,40 @@ export default function PatientsPage() {
           </div>
 
           {/* Table Footer & Pagination */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50/60 text-xs text-slate-600">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60 text-xs text-slate-600 dark:text-slate-400">
             <div>
               {total > 0 ? (
                 <span>
-                  Showing <strong className="text-slate-800">{startIdx}</strong> to{" "}
-                  <strong className="text-slate-800">{endIdx}</strong> of{" "}
-                  <strong className="text-slate-800">{total}</strong> registered patients
+                  Showing <strong className="text-slate-800 dark:text-slate-200">{startIdx}</strong> to{" "}
+                  <strong className="text-slate-800 dark:text-slate-200">{endIdx}</strong> of{" "}
+                  <strong className="text-slate-800 dark:text-slate-200">{total}</strong> registered patients
                 </span>
               ) : (
                 <span>0 records found</span>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0 || isLoading}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                leftIcon={<ChevronLeft size={14} />}
               >
-                <ChevronLeft size={14} /> Previous
-              </button>
-              <span className="font-medium text-slate-700 px-1">
+                Previous
+              </Button>
+              <span className="font-medium text-slate-700 dark:text-slate-300 px-1">
                 Page {page + 1} of {Math.max(1, Math.ceil(total / pageSize))}
               </span>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={(page + 1) * pageSize >= total || isLoading}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                rightIcon={<ChevronRight size={14} />}
               >
-                Next <ChevronRight size={14} />
-              </button>
+                Next
+              </Button>
             </div>
           </div>
         </div>
@@ -529,36 +541,38 @@ export default function PatientsPage() {
         title="Archive Patient Record"
         description="Are you sure you want to archive this patient?"
       >
-        <div className="space-y-4 text-xs text-slate-600">
+        <div className="space-y-4 text-xs text-slate-600 dark:text-slate-400">
           <p>
             Archiving will soft-delete{" "}
-            <strong className="text-slate-900">
+            <strong className="text-slate-900 dark:text-slate-100">
               {selectedPatientForArchive?.first_name} {selectedPatientForArchive?.last_name}
             </strong>{" "}
-            ({selectedPatientForArchive?.patient_number}). The record remains stored and can be restored
+            ({selectedPatientForArchive?.patient_number}). The record remains securely stored and can be restored
             at any time from the archived view.
           </p>
           <div className="flex items-center justify-end gap-2.5 pt-2">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setSelectedPatientForArchive(null)}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-md"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
               onClick={() => {
                 if (selectedPatientForArchive) {
                   archiveMutation.mutate(selectedPatientForArchive.id);
                 }
               }}
-              disabled={archiveMutation.isPending}
-              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-md shadow-xs disabled:opacity-50"
+              isLoading={archiveMutation.isPending}
             >
-              {archiveMutation.isPending ? "Archiving..." : "Confirm Archive"}
-            </button>
+              Confirm Archive
+            </Button>
           </div>
         </div>
       </Dialog>
-    </main>
+    </AppShell>
   );
 }

@@ -47,6 +47,7 @@ from app.schemas.ai import (
     TreatmentSuggestionResponse,
 )
 from app.schemas.treatment import TreatmentDetail
+from app.security.crypto import encrypt_value
 from app.services.ai.analytics_service import AIBusinessAnalyticsService
 from app.services.ai.billing_assistant_service import AIBillingAssistantService
 from app.services.ai.clinical_assistant_service import AIClinicalAssistantService
@@ -173,7 +174,7 @@ async def update_ai_config(
     if payload.api_base_url is not None:
         config.api_base_url = payload.api_base_url
     if payload.api_key is not None:
-        config.api_key_encrypted = payload.api_key
+        config.api_key_encrypted = encrypt_value(payload.api_key)
     if payload.temperature is not None:
         config.temperature = payload.temperature
     if payload.max_tokens is not None:

@@ -6,9 +6,7 @@ import {
   AlertTriangle,
   Calendar,
   CheckCircle2,
-  Clock,
   Search,
-  User,
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -93,15 +91,6 @@ export function BookingModal({
   const [isEmergencyOverride, setIsEmergencyOverride] = useState(false);
   const [conflictError, setConflictError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (preselectedPatient) {
-      setSelectedPatient(preselectedPatient);
-    }
-    if (initialDate) setAppointmentDate(initialDate);
-    if (initialTime) setStartTime(initialTime);
-    if (initialChairId) setChairId(initialChairId);
-  }, [preselectedPatient, initialDate, initialTime, initialChairId]);
-
   // Query dentists
   const dentistsQuery = useQuery<DentistOption[]>({
     queryKey: ["clinic-dentists"],
@@ -122,6 +111,13 @@ export function BookingModal({
     enabled: isOpen,
   });
 
+  // Derived state: fallback to defaults/props without setState cascading renders
+  const effectivePatient = selectedPatient ?? preselectedPatient ?? null;
+  const effectiveDentistId = dentistId || (dentistsQuery.data?.[0]?.id ?? "");
+  const effectiveChairId = chairId || initialChairId || (chairsQuery.data?.[0]?.id ?? "");
+  const effectiveDate = appointmentDate || initialDate || new Date().toISOString().split("T")[0];
+  const effectiveStartTime = startTime || initialTime || "10:00";
+
   // Search patients
   const patientSearchQuery = useQuery<PatientOption[]>({
     queryKey: ["patient-search-booking", patientSearch],
@@ -130,33 +126,23 @@ export function BookingModal({
       const res = await api.get("/patients", { params: { search: patientSearch.trim(), limit: 5 } });
       return res.data;
     },
-    enabled: isOpen && patientSearch.trim().length > 1 && !selectedPatient,
+    enabled: isOpen && patientSearch.trim().length > 1 && !effectivePatient,
   });
-
-  // Automatically select first dentist and chair if available
-  useEffect(() => {
-    if (!dentistId && dentistsQuery.data && dentistsQuery.data.length > 0) {
-      setDentistId(dentistsQuery.data[0].id);
-    }
-    if (!chairId && chairsQuery.data && chairsQuery.data.length > 0) {
-      setChairId(chairsQuery.data[0].id);
-    }
-  }, [dentistsQuery.data, chairsQuery.data, dentistId, chairId]);
 
   // Mutation
   const bookMutation = useMutation({
     mutationFn: async () => {
       setConflictError(null);
-      if (!selectedPatient) throw new Error("Please select a patient.");
-      if (!dentistId) throw new Error("Please select a dentist.");
-      if (!chairId) throw new Error("Please select a dental chair.");
+      if (!effectivePatient) throw new Error("Please select a patient.");
+      if (!effectiveDentistId) throw new Error("Please select a dentist.");
+      if (!effectiveChairId) throw new Error("Please select a dental chair.");
 
       const payload = {
-        patient_id: selectedPatient.id,
-        dentist_id: dentistId,
-        chair_id: chairId,
-        date: appointmentDate,
-        start_time: startTime.length === 5 ? `${startTime}:00` : startTime,
+        patient_id: effectivePatient.id,
+        dentist_id: effectiveDentistId,
+        chair_id: effectiveChairId,
+        date: effectiveDate,
+        start_time: effectiveStartTime.length === 5 ? `${effectiveStartTime}:00` : effectiveStartTime,
         duration: Number(duration),
         visit_type: visitType,
         priority,
@@ -175,14 +161,15 @@ export function BookingModal({
       void queryClient.invalidateQueries({ queryKey: ["calendar-month"] });
       void queryClient.invalidateQueries({ queryKey: ["appointment-queue"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      if (selectedPatient) {
-        void queryClient.invalidateQueries({ queryKey: ["patient-timeline", selectedPatient.id] });
+      if (effectivePatient) {
+        void queryClient.invalidateQueries({ queryKey: ["patient-timeline", effectivePatient.id] });
       }
       onClose();
       if (onSuccess) onSuccess();
     },
-    onError: (err: any) => {
-      const msg = err.response?.data?.detail || err.message || "Failed to book appointment.";
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
+      const msg = axiosErr.response?.data?.detail || axiosErr.message || "Failed to book appointment.";
       setConflictError(msg);
     },
   });
@@ -230,19 +217,19 @@ export function BookingModal({
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
               Patient *
             </label>
-            {selectedPatient ? (
+            {effectivePatient ? (
               <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-teal-700 text-white flex items-center justify-center font-bold text-xs">
-                    {selectedPatient.name.split(" ").map((n) => n[0]).join("")}
+                    {effectivePatient.name.split(" ").map((n) => n[0]).join("")}
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-teal-950">{selectedPatient.name}</h4>
-                    <p className="text-[11px] text-teal-700">{selectedPatient.patientNumber}</p>
+                    <h4 className="text-xs font-bold text-teal-950">{effectivePatient.name}</h4>
+                    <p className="text-[11px] text-teal-700">{effectivePatient.patientNumber}</p>
                   </div>
-                  {selectedPatient.alerts && selectedPatient.alerts.length > 0 && (
+                  {effectivePatient.alerts && effectivePatient.alerts.length > 0 && (
                     <div className="flex gap-1 ml-2">
-                      {selectedPatient.alerts.map((a, i) => (
+                      {effectivePatient.alerts.map((a, i) => (
                         <Badge key={i} variant="destructive" className="text-[10px] py-0 px-1.5">
                           {a}
                         </Badge>
@@ -326,7 +313,7 @@ export function BookingModal({
                 Dentist *
               </label>
               <select
-                value={dentistId}
+                value={effectiveDentistId}
                 onChange={(e) => setDentistId(e.target.value)}
                 required
                 className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
@@ -345,7 +332,7 @@ export function BookingModal({
                 Dental Chair / Operatory *
               </label>
               <select
-                value={chairId}
+                value={effectiveChairId}
                 onChange={(e) => setChairId(e.target.value)}
                 required
                 className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
@@ -368,7 +355,7 @@ export function BookingModal({
               </label>
               <input
                 type="date"
-                value={appointmentDate}
+                value={effectiveDate}
                 onChange={(e) => setAppointmentDate(e.target.value)}
                 required
                 className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
@@ -381,7 +368,7 @@ export function BookingModal({
               </label>
               <input
                 type="time"
-                value={startTime}
+                value={effectiveStartTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 required
                 className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"

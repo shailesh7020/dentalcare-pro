@@ -5,6 +5,7 @@ import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api import metrics
@@ -17,6 +18,7 @@ from app.core.exceptions import (
     validation_exception_handler,
 )
 from app.core.logging import configure_logging
+from app.middleware.remote_access import RemoteAccessMiddleware
 from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.storage import StorageHealthService
@@ -28,7 +30,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    application.state.redis = redis.from_url(settings.redis_url, decode_responses=True)
+    application.state.redis = redis.from_url(
+        settings.redis_url,
+        decode_responses=True,
+        socket_connect_timeout=0.2,
+        socket_timeout=0.2,
+    )
     application.state.storage = StorageHealthService(settings)
     logger.info("application.started environment=%s", settings.environment)
     yield
@@ -48,7 +55,9 @@ app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RemoteAccessMiddleware)
 app.add_middleware(RequestContextMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,

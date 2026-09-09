@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.dependencies.auth import current_user
-from app.models.identity import User
+from app.models.identity import Role, User
 from app.schemas.mobile import (
     MobileAIAssistRequest,
     MobileAIAssistResponse,
@@ -99,6 +99,8 @@ async def get_digital_signature(
     sig = await service.get_digital_signature(signature_id)
     if not sig:
         raise HTTPException(status_code=404, detail="Digital signature not found.")
+    if actor.role != Role.SUPER_ADMIN and actor.clinic_id is not None and sig.clinic_id != actor.clinic_id:
+        raise HTTPException(status_code=403, detail="Forbidden: cross-clinic signature access not permitted.")
     return sig
 
 
@@ -132,3 +134,22 @@ async def mobile_ai_assist(
 ) -> MobileAIAssistResponse:
     service = MobileService(db)
     return await service.mobile_ai_assist(payload)
+
+
+@router.get("/dashboard")
+async def get_mobile_dashboard(
+    actor: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Optimized single round-trip mobile summary for doctor/owner remote view."""
+    from app.services.remote_access_service import RemoteAccessService
+
+    clinic_id = actor.clinic_id
+    if not clinic_id:
+        from app.models.identity import Clinic
+        clinic = (await db.execute(select(Clinic).limit(1))).scalar_one_or_none()
+        clinic_id = clinic.id if clinic else actor.id
+
+    return await RemoteAccessService.get_mobile_dashboard_summary(
+        clinic_id=clinic_id, user=actor, db=db
+    )

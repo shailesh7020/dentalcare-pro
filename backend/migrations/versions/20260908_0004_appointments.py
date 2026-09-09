@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql as pg
 
 revision = "20260908_0004"
 down_revision = "20260906_0003"
@@ -33,7 +34,7 @@ def audit_columns() -> list[sa.Column]:
 
 def upgrade() -> None:
     # 1. Enums
-    appointment_status = sa.Enum(
+    appointment_status = pg.ENUM(
         "SCHEDULED",
         "CONFIRMED",
         "CHECKED_IN",
@@ -43,8 +44,9 @@ def upgrade() -> None:
         "NO_SHOW",
         "RESCHEDULED",
         name="appointment_status",
+        create_type=False,
     )
-    visit_type = sa.Enum(
+    visit_type = pg.ENUM(
         "CONSULTATION",
         "EMERGENCY",
         "FOLLOW_UP",
@@ -58,8 +60,9 @@ def upgrade() -> None:
         "PEDIATRIC",
         "OTHER",
         name="appointment_visit_type",
+        create_type=False,
     )
-    chair_status = sa.Enum("ACTIVE", "MAINTENANCE", "INACTIVE", name="chair_status")
+    chair_status = pg.ENUM("ACTIVE", "MAINTENANCE", "INACTIVE", name="chair_status", create_type=False)
 
     appointment_status.create(op.get_bind(), checkfirst=True)
     visit_type.create(op.get_bind(), checkfirst=True)

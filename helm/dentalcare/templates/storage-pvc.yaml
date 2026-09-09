@@ -1,0 +1,18 @@
+{{- if .Values.storage.persistence.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "dentalcare.fullname" . }}-storage-pvc
+  labels:
+    app.kubernetes.io/name: {{ include "dentalcare.name" . }}
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+    - {{ .Values.storage.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.persistence.size | default "20Gi" }}
+  {{- if .Values.storage.persistence.storageClass }}
+  storageClassName: {{ .Values.storage.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}

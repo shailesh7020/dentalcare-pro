@@ -140,6 +140,81 @@ class ReminderService:
             reminders_dispatched=dispatched,
         )
 
+    async def process_missed_appointment_followups(self, clinic_id: UUID) -> ReminderProcessResult:
+        """Finds missed visits from the last 1-3 days and dispatches rescheduling follow-ups."""
+        now = datetime.now(UTC)
+        past_window_start = (now - timedelta(days=3)).date()
+        past_window_end = (now - timedelta(days=1)).date()
+
+        stmt = (
+            select(Appointment)
+            .options(
+                selectinload(Appointment.patient),
+                selectinload(Appointment.dentist),
+            )
+            .where(
+                Appointment.clinic_id == clinic_id,
+                Appointment.status.in_([AppointmentStatus.CANCELLED, AppointmentStatus.SCHEDULED]),
+                Appointment.date >= past_window_start,
+                Appointment.date <= past_window_end,
+                Appointment.deleted_at.is_(None),
+            )
+        )
+        res = await self.db.execute(stmt)
+        appointments = list(res.scalars().all())
+
+        scanned = len(appointments)
+        created = 0
+        dispatched = 0
+
+        clinic = await self.db.get(Clinic, clinic_id)
+        clinic_name = clinic.name if clinic else "DentalCare Pro"
+        clinic_phone = clinic.phone if clinic else "+91 99000 11223"
+
+        for appt in appointments:
+            if not appt.patient:
+                continue
+
+            tag = f"missed_followup_{appt.id}"
+            tag_check = (
+                select(Notification.id)
+                .where(
+                    Notification.clinic_id == clinic_id,
+                    Notification.patient_id == appt.patient_id,
+                    Notification.data_json.like(f"%{tag}%"),
+                )
+                .limit(1)
+            )
+            existing = await self.db.scalar(tag_check)
+            if existing:
+                continue
+
+            ctx = {
+                "patient_name": f"{appt.patient.first_name} {appt.patient.last_name}",
+                "appointment_date": appt.date.strftime("%d %b %Y"),
+                "clinic_name": clinic_name,
+                "clinic_phone": clinic_phone,
+            }
+
+            payload = NotificationCreate(
+                notification_type=NotificationType.APPOINTMENT_REMINDER,
+                priority=NotificationPriority.NORMAL,
+                delivery_channel=DeliveryChannel.IN_APP,
+                patient_id=appt.patient_id,
+                title=f"Missed Dental Visit Follow-up: {clinic_name}",
+                message=f"We noticed you were unable to make your visit on {appt.date.strftime('%d %b %Y')}. Your oral health is important to us. Please call {clinic_phone} to reschedule.",
+                data_json=json.dumps({"appointment_id": str(appt.id), "tag": tag}),
+            )
+            await self.notif_service.send_notification(clinic_id, payload, context=ctx)
+            created += 1
+            dispatched += 1
+
+        return ReminderProcessResult(
+            scanned_appointments=scanned,
+            reminders_created=created,
+            reminders_dispatched=dispatched,
+        )
+
     async def scan_and_send_reminders(self, clinic_id: UUID) -> ReminderProcessResult:
         return await self.process_appointment_reminders(clinic_id)
 

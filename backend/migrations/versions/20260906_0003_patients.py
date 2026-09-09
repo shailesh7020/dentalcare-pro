@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql as pg
 
 revision = "20260906_0003"
 down_revision = "20260902_0002"
@@ -21,8 +22,8 @@ def audit_columns() -> list[sa.Column]:
 
 
 def upgrade() -> None:
-    gender = sa.Enum("FEMALE", "MALE", "NON_BINARY", "PREFER_NOT_TO_SAY", name="patient_gender")
-    blood_group = sa.Enum("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "UNKNOWN", name="blood_group")
+    gender = pg.ENUM("FEMALE", "MALE", "NON_BINARY", "PREFER_NOT_TO_SAY", name="patient_gender", create_type=False)
+    blood_group = pg.ENUM("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "UNKNOWN", name="blood_group", create_type=False)
     gender.create(op.get_bind(), checkfirst=True); blood_group.create(op.get_bind(), checkfirst=True)
     op.create_table("patients", *audit_columns(),
         sa.Column("clinic_id", sa.Uuid(), sa.ForeignKey("clinics.id"), nullable=False), sa.Column("patient_number", sa.String(32), nullable=False),

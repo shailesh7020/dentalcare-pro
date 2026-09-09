@@ -1,6 +1,7 @@
 """Create Phase 1 clinic identity tables."""
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql as pg
 
 revision = "20260902_0001"
 down_revision = None
@@ -19,7 +20,7 @@ def audit_columns() -> list[sa.Column]:
 
 
 def upgrade() -> None:
-    role = sa.Enum("SUPER_ADMIN", "CLINIC_ADMIN", "DENTIST", "RECEPTIONIST", "ASSISTANT", name="user_role")
+    role = pg.ENUM("SUPER_ADMIN", "CLINIC_ADMIN", "DENTIST", "RECEPTIONIST", "ASSISTANT", name="user_role", create_type=False)
     role.create(op.get_bind(), checkfirst=True)
     op.create_table("clinics", *audit_columns(), sa.Column("name", sa.String(160), nullable=False), sa.Column("slug", sa.String(80), nullable=False), sa.Column("email", sa.String(255), nullable=False), sa.Column("phone", sa.String(32)), sa.Column("timezone", sa.String(64), nullable=False, server_default="Asia/Kolkata"), sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()), sa.UniqueConstraint("slug"))
     op.create_index("ix_clinics_slug", "clinics", ["slug"])

@@ -1,9 +1,13 @@
+import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -62,7 +66,17 @@ class Settings(BaseSettings):
     @classmethod
     def split_origins(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):
-            return [origin.strip().rstrip("/") for origin in value.split(",") if origin.strip()]
+            value_str = value.strip()
+            if value_str.startswith("[") and value_str.endswith("]"):
+                try:
+                    parsed = json.loads(value_str)
+                    if isinstance(parsed, list):
+                        return [str(origin).strip().rstrip("/") for origin in parsed if str(origin).strip()]
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    logger.debug("Failed to parse CORS_ORIGINS as JSON array, falling back to comma split")
+            return [origin.strip().strip("'\"[]").rstrip("/") for origin in value_str.split(",") if origin.strip().strip("'\"[]")]
+        if isinstance(value, list):
+            return [str(origin).strip().rstrip("/") for origin in value if str(origin).strip()]
         return value
 
     @model_validator(mode="after")

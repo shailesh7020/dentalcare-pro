@@ -86,6 +86,14 @@ def get_analytics_service(db: Annotated[AsyncSession, Depends(get_db)]) -> Enter
     return EnterpriseAnalyticsService(db, EnterpriseRepository(db))
 
 
+def check_org_access(user: User, org_id: UUID) -> None:
+    if user.role != Role.SUPER_ADMIN and user.organization_id is not None and user.organization_id != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: user cannot access resources outside their organization.",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Permissions & Seed
 # ---------------------------------------------------------------------------
@@ -133,6 +141,7 @@ async def get_organization(
     current_user: Annotated[User, Depends(require_roles(*ENTERPRISE_STAFF_ROLES))],
     service: Annotated[EnterpriseService, Depends(get_enterprise_service)],
 ) -> OrganizationResponse:
+    check_org_access(current_user, org_id)
     org = await service.get_organization(org_id)
     if not org:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
@@ -146,6 +155,7 @@ async def update_organization(
     current_user: Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.ORGANIZATION_ADMIN))],
     service: Annotated[EnterpriseService, Depends(get_enterprise_service)],
 ) -> OrganizationResponse:
+    check_org_access(current_user, org_id)
     updated = await service.update_organization(org_id, payload, actor_id=current_user.id)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
@@ -162,6 +172,7 @@ async def create_region(
     current_user: Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.ORGANIZATION_ADMIN, Role.REGIONAL_MANAGER))],
     service: Annotated[EnterpriseService, Depends(get_enterprise_service)],
 ) -> RegionResponse:
+    check_org_access(current_user, org_id)
     full_payload = RegionCreate(**payload.model_dump(), organization_id=org_id)
     return await service.create_region(full_payload)
 
@@ -172,6 +183,7 @@ async def list_regions(
     current_user: Annotated[User, Depends(require_roles(*ENTERPRISE_STAFF_ROLES))],
     service: Annotated[EnterpriseService, Depends(get_enterprise_service)],
 ) -> list[RegionResponse]:
+    check_org_access(current_user, org_id)
     return await service.list_regions(org_id)
 
 
@@ -183,6 +195,7 @@ async def update_region(
     current_user: Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.ORGANIZATION_ADMIN, Role.REGIONAL_MANAGER))],
     service: Annotated[EnterpriseService, Depends(get_enterprise_service)],
 ) -> RegionResponse:
+    check_org_access(current_user, org_id)
     updated = await service.update_region(region_id, payload)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Region not found")
@@ -199,6 +212,7 @@ async def create_branch(
     current_user: Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.ORGANIZATION_ADMIN, Role.REGIONAL_MANAGER))],
     service: Annotated[EnterpriseService, Depends(get_enterprise_service)],
 ) -> BranchResponse:
+    check_org_access(current_user, org_id)
     if payload.organization_id != org_id:
         payload.organization_id = org_id
     return await service.create_branch(payload, actor_id=current_user.id)
@@ -213,6 +227,7 @@ async def list_branches(
     is_active: bool | None = None,
     search: str | None = None,
 ) -> list[BranchResponse]:
+    check_org_access(current_user, org_id)
     return await service.list_branches(org_id=org_id, region_id=region_id, is_active=is_active, search=search)
 
 

@@ -14,6 +14,8 @@ from pathlib import Path
 
 ROOT_DIR = Path(r"e:\dentalcare-pro").resolve()
 GIFT_DIR = ROOT_DIR / "Dental Clinic Management Gift"
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 FORBIDDEN_EXTENSIONS = {
     ".py", ".pyc", ".pyd", ".pyo", ".ts", ".tsx", ".jsx", ".dart",
@@ -209,6 +211,32 @@ def assemble():
     ]
     with open(support_dir / "Emergency-Recovery.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(recovery_lines) + "\n")
+
+    # 6b. Ensure Setup.exe & Install DentalCare Pro.exe exist
+    inst_exe = GIFT_DIR / "Install DentalCare Pro.exe"
+    if not inst_exe.exists():
+        dist_inst = ROOT_DIR / "dist" / "Install DentalCare Pro.exe"
+        if dist_inst.exists():
+            shutil.copy2(dist_inst, inst_exe)
+    if inst_exe.exists():
+        shutil.copy2(inst_exe, GIFT_DIR / "Setup.exe")
+        print(f"  [OK] Setup.exe created ({(GIFT_DIR / 'Setup.exe').stat().st_size / (1024*1024):.2f} MB)")
+
+    # 6c. Generate All 7 Commercial PDFs
+    print("\n[+] Generating All 7 Commercial PDFs...")
+    try:
+        from scripts.desktop.generate_all_commercial_pdfs import main as gen_pdfs
+        gen_pdfs()
+    except Exception as e:
+        print(f"  [WARNING] PDF Generation inline call: {e}")
+
+    # 6d. Populate Gift Subfolders (Clinic Logo, Sample Data, Backup Utility, Uninstaller)
+    print("\n[+] Setting up Commercial Distribution Subfolders...")
+    try:
+        from scripts.desktop.setup_commercial_folders import main as setup_subfolders
+        setup_subfolders()
+    except Exception as e:
+        print(f"  [WARNING] Subfolder setup inline call: {e}")
 
     # 7. Strict Source Code Protection Audit
     print("\n" + "=" * 70)

@@ -22,16 +22,18 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             endpoint=request.url.path,
         )
         started = time.perf_counter()
+        response = None
         try:
             response = await call_next(request)
+            response.headers["X-Request-ID"] = request_id
+            return response
         finally:
             elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+            if response is not None:
+                response.headers["X-Process-Time-Ms"] = str(elapsed_ms)
             logger.info(
                 "request.completed status=%s duration_ms=%s",
-                getattr(locals().get("response"), "status_code", 500),
+                response.status_code if response else 500,
                 elapsed_ms,
             )
             clear_request_context()
-        response.headers["X-Request-ID"] = request_id
-        response.headers["X-Process-Time-Ms"] = str(elapsed_ms)
-        return response

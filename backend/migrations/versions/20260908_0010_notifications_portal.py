@@ -140,7 +140,6 @@ def upgrade() -> None:
         sa.Column("title", sa.String(200), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("form_type", sa.String(50), server_default="CUSTOM", nullable=False),
-        sa.Column("version", sa.Integer(), server_default="1", nullable=False),
         sa.Column("schema_json", sa.Text(), nullable=False),
         sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False),
     )
@@ -179,7 +178,6 @@ def upgrade() -> None:
         sa.Column("signed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("ip_address", sa.String(45), nullable=True),
         sa.Column("witness_name", sa.String(100), nullable=True),
-        sa.Column("version", sa.Integer(), server_default="1", nullable=False),
         sa.Column("expires_at", sa.Date(), nullable=True),
     )
     op.create_index("ix_consent_records_clinic_id", "consent_records", ["clinic_id"])

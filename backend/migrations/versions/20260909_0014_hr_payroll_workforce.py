@@ -345,7 +345,6 @@ def upgrade() -> None:
         sa.Column("file_url", sa.String(255), nullable=False),
         sa.Column("file_size_bytes", sa.Integer(), server_default="0", nullable=False),
         sa.Column("mime_type", sa.String(80), server_default="application/pdf", nullable=False),
-        sa.Column("version", sa.Integer(), server_default="1", nullable=False),
         sa.Column("expiry_date", sa.Date(), nullable=True),
         sa.Column("is_verified", sa.Boolean(), server_default="false", nullable=False),
     )

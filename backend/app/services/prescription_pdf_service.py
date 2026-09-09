@@ -16,11 +16,17 @@ from reportlab.platypus import (
 )
 
 from app.schemas.prescription import PrescriptionDetail
+from app.services.qr_service import QRCodeService
+from app.services.signature_service import ClinicianSignatureService
 
 
 class PrescriptionPDFService:
     @staticmethod
-    def generate_pdf(rx: PrescriptionDetail) -> bytes:
+    def generate_pdf(
+        rx: PrescriptionDetail,
+        signature_data: str | None = None,
+        verification_hash: str | None = None,
+    ) -> bytes:
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -326,29 +332,45 @@ class PrescriptionPDFService:
             story.append(Spacer(1, 14))
 
         # 8. Signature & Stamp Footer
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 15))
+        actual_hash = verification_hash or f"DCP-RX-{str(rx.id)[:12].upper()}"
+        qr_flow = QRCodeService.generate_qr_flowable(
+            QRCodeService.generate_prescription_payload(str(rx.id), actual_hash),
+            size=55,
+        )
+
+        dentist_sig_cell: list[Any] = []
+        if signature_data:
+            sig_img = ClinicianSignatureService.create_signature_flowable(signature_data, width=110, height=35)
+            if sig_img:
+                dentist_sig_cell.append(sig_img)
+        dentist_sig_cell.append(
+            Paragraph(
+                f"______________________________________<br/>"
+                f"<b>{dentist_name}</b><br/>"
+                f"<font size='7' color='#64748b'>Authorized Dental Surgeon &bull; Reg: {dentist_reg}</font>",
+                doctor_meta_style,
+            )
+        )
+
         sig_data = [
             [
+                qr_flow,
                 Paragraph(
                     "<font size='7' color='#94a3b8'>Status: "
                     f"<b>{rx.status}</b> &bull; Issued at: {rx.issued_at or rx.created_at}</font><br/>"
-                    "<font size='6.5' color='#94a3b8'>Digital Verification Hash: "
-                    f"DCP-RX-{str(rx.id)[:12].upper()}</font>",
+                    "<font size='6.5' color='#94a3b8'>Digital Verification Hash:<br/>"
+                    f"{actual_hash}</font>",
                     table_cell_style,
                 ),
-                Paragraph(
-                    f"______________________________________<br/>"
-                    f"<b>{dentist_name}</b><br/>"
-                    f"<font size='7' color='#64748b'>Authorized Dental Surgeon &bull; Reg: {dentist_reg}</font>",
-                    doctor_meta_style,
-                ),
+                dentist_sig_cell,
             ]
         ]
-        sig_table = Table(sig_data, colWidths=[260, 260])
+        sig_table = Table(sig_data, colWidths=[65, 205, 250])
         sig_table.setStyle(
             TableStyle(
                 [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
                     ("TOPPADDING", (0, 0), (-1, -1), 0),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
                 ]
