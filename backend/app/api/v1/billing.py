@@ -361,6 +361,11 @@ async def get_payment(
     summary="Download printable payment receipt PDF",
     description="Generates an official A4 printable payment receipt with payment method, amount, and clinic seal.",
 )
+@router.get(
+    "/payments/{payment_id}/receipt/pdf",
+    summary="Download printable payment receipt PDF (alias)",
+    include_in_schema=False,
+)
 async def download_receipt_pdf(
     payment_id: UUID,
     actor: User = Depends(require_roles(*ALL_STAFF)),

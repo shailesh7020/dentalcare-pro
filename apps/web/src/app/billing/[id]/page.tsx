@@ -19,6 +19,7 @@ import {
   FileText,
   IndianRupee,
   Layers,
+  MessageSquare,
   Phone,
   Plus,
   Printer,
@@ -209,6 +210,72 @@ export default function InvoiceDetailPage({
     }
   };
 
+  // Share Receipt via WhatsApp
+  const handleSendReceiptWhatsApp = (payment: PaymentRead) => {
+    if (!invoice) return;
+    const phone = (invoice.patient_phone || "").replace(/[^0-9]/g, "");
+    const clinic = invoice.clinic_name || "DentalCare Pro";
+    const patientName = invoice.patient_name || "Patient";
+    const dateStr =
+      payment.payment_date ||
+      (payment.created_at
+        ? payment.created_at.slice(0, 10)
+        : new Date().toISOString().slice(0, 10));
+
+    const text =
+`🦷 *${clinic} - Payment Receipt*
+
+Dear ${patientName},
+Thank you for your payment. Here are your transaction details:
+
+🧾 *Receipt #:* ${payment.receipt_number}
+📅 *Date:* ${dateStr}
+💳 *Payment Mode:* ${payment.method}
+💰 *Amount Paid:* ₹${payment.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+📑 *Invoice #:* ${invoice.invoice_number}
+⚖️ *Remaining Balance:* ₹${invoice.balance_due.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+
+If you have any questions, please contact our clinic team.
+Wishing you great oral health! ✨`;
+
+    const encoded = encodeURIComponent(text);
+    const waUrl =
+      phone.length >= 10
+        ? `https://wa.me/${phone.length === 10 ? "91" + phone : phone}?text=${encoded}`
+        : `https://wa.me/?text=${encoded}`;
+    window.open(waUrl, "_blank");
+  };
+
+  // Share Invoice via WhatsApp
+  const handleSendInvoiceWhatsApp = () => {
+    if (!invoice) return;
+    const phone = (invoice.patient_phone || "").replace(/[^0-9]/g, "");
+    const clinic = invoice.clinic_name || "DentalCare Pro";
+    const patientName = invoice.patient_name || "Patient";
+
+    const text =
+`🦷 *${clinic} - Dental Invoice Summary*
+
+Dear ${patientName},
+Here is the invoice summary for your visit:
+
+📑 *Invoice #:* ${invoice.invoice_number}
+📅 *Date:* ${invoice.date || invoice.created_at.slice(0, 10)}
+💵 *Grand Total:* ₹${invoice.grand_total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+✅ *Amount Paid:* ₹${invoice.amount_paid.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+⚖️ *Balance Due:* ₹${invoice.balance_due.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+📌 *Status:* ${invoice.status}
+
+Thank you for choosing ${clinic}! ✨`;
+
+    const encoded = encodeURIComponent(text);
+    const waUrl =
+      phone.length >= 10
+        ? `https://wa.me/${phone.length === 10 ? "91" + phone : phone}?text=${encoded}`
+        : `https://wa.me/?text=${encoded}`;
+    window.open(waUrl, "_blank");
+  };
+
   if (invoiceQuery.isLoading) {
     return (
       <div className="p-8 max-w-5xl mx-auto space-y-6">
@@ -299,6 +366,16 @@ export default function InvoiceDetailPage({
             >
               <Download className="w-3.5 h-3.5 text-blue-600" />
               {downloadingPdf ? "Generating PDF..." : "Download Tax Invoice PDF"}
+            </button>
+
+            {/* Send Invoice via WhatsApp */}
+            <button
+              onClick={handleSendInvoiceWhatsApp}
+              title="Send Invoice summary to Patient via WhatsApp"
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors shadow-xs"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+              Send on WhatsApp
             </button>
 
             {/* Print Button */}
@@ -654,6 +731,15 @@ export default function InvoiceDetailPage({
                               className="p-1 text-slate-500 hover:text-blue-600 rounded transition-colors"
                             >
                               <Download className="w-4 h-4" />
+                            </button>
+
+                            {/* Send Receipt on WhatsApp */}
+                            <button
+                              onClick={() => handleSendReceiptWhatsApp(p)}
+                              title={`Send Receipt #${p.receipt_number} to Patient via WhatsApp`}
+                              className="p-1 text-slate-500 hover:text-emerald-600 rounded transition-colors"
+                            >
+                              <MessageSquare className="w-4 h-4 text-emerald-600" />
                             </button>
 
                             {/* Refund Button */}
