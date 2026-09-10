@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-import io
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from uuid import uuid4
-
-import pytest
 
 from app.schemas.patient_report import (
     ALL_REPORT_SECTIONS,
-    PatientReportGenerateRequest,
     PatientReportResponse,
     PatientReportSectionEnum,
-    PatientReportShareRequest,
 )
 from app.services.patient_report_pdf_service import PatientReportPDFService
 
@@ -247,7 +242,6 @@ def test_pdf_report_subset_sections():
 
 def test_patient_report_whatsapp_message_formatting():
     """Verify the generated WhatsApp message includes correct greeting and clinic name."""
-    from app.schemas.patient_report import PatientReportResponse
 
     resp = PatientReportResponse(
         report_number="REP-20260910-0042",

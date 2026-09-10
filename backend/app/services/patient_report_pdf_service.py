@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -178,16 +177,6 @@ class PatientReportPDFService:
             fontSize=8,
             leading=10.5,
             textColor=slate_dark,
-        )
-        cell_right = ParagraphStyle(
-            "RepCellR",
-            parent=cell_style,
-            alignment=2,
-        )
-        cell_right_bold = ParagraphStyle(
-            "RepCellRB",
-            parent=cell_bold,
-            alignment=2,
         )
         alert_style = ParagraphStyle(
             "RepAlert",

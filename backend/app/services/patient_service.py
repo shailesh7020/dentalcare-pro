@@ -20,7 +20,7 @@ from app.models import (
     User,
 )
 from app.models.appointment import Appointment, AppointmentStatus
-from app.models.billing import Invoice, Payment
+from app.models.billing import Invoice
 from app.models.commercial import ClinicianSignature
 from app.models.identity import Clinic
 from app.models.odontogram import Tooth
@@ -29,7 +29,6 @@ from app.models.treatment import Treatment
 from app.repositories.patient_repository import PatientRepository
 from app.schemas.patient import DuplicateWarning, PatientInput, PatientUpdate
 from app.schemas.patient_report import (
-    ALL_REPORT_SECTIONS,
     PatientReportGenerateRequest,
     PatientReportResponse,
     PatientReportSectionEnum,
@@ -732,7 +731,7 @@ class PatientService:
         # 13. Save to patient documents if requested
         doc_id: UUID | None = None
         if payload.save_to_documents and storage_service:
-            key, url = await storage_service.save_patient_bytes(
+            key, _url = await storage_service.save_patient_bytes(
                 clinic_id=self.clinic_id,
                 patient_id=patient.id,
                 content=pdf_bytes,
