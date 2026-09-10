@@ -284,8 +284,25 @@ class PatientService:
         payload: PatientReportGenerateRequest,
         storage_service: Any = None,
     ) -> tuple[bytes, PatientReportResponse]:
-        # 1. Fetch Patient
-        patient = await self.get(patient_id)
+        # 1. Fetch Patient with medical and dental history
+        stmt_patient = (
+            select(Patient)
+            .options(
+                selectinload(Patient.medical_history),
+                selectinload(Patient.dental_history),
+            )
+            .where(
+                Patient.id == patient_id,
+                Patient.clinic_id == self.clinic_id,
+                Patient.deleted_at.is_(None),
+            )
+        )
+        patient_row = await self.db.execute(stmt_patient)
+        patient = patient_row.scalar_one_or_none()
+        if patient is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found"
+            )
 
         # 2. Fetch Clinic
         clinic = await self.db.get(Clinic, self.clinic_id)
@@ -325,7 +342,7 @@ class PatientService:
             "address": patient.address,
             "city": patient.city,
             "emergency_contact_name": patient.emergency_contact_name,
-            "emergency_contact_phone": patient.emergency_contact_phone,
+            "emergency_contact_phone": patient.emergency_contact_number,
             "medical_history": {
                 "diabetes": (
                     patient.medical_history.diabetes
@@ -491,7 +508,7 @@ class PatientService:
         patient_data["treatments"] = [
             {
                 "treatment_number": tx.treatment_number,
-                "title": tx.title,
+                "title": tx.procedure_performed or tx.diagnosis or "Clinical Procedure",
                 "diagnosis": tx.diagnosis,
                 "status": str(tx.status),
                 "date": (
@@ -519,10 +536,10 @@ class PatientService:
                     if tx.dentist
                     else "Clinician"
                 ),
-                "text": tx.notes,
+                "text": tx.clinical_notes,
             }
             for tx in treatments
-            if tx.notes
+            if tx.clinical_notes
         ]
 
         # 6. Odontogram / Teeth
@@ -576,7 +593,7 @@ class PatientService:
         stmt_rx = (
             select(Prescription)
             .options(
-                selectinload(Prescription.medications),
+                selectinload(Prescription.items),
                 selectinload(Prescription.dentist),
             )
             .where(
@@ -598,9 +615,9 @@ class PatientService:
                         "dosage": m.dosage,
                         "frequency": m.frequency,
                         "duration": m.duration,
-                        "instructions": m.instructions,
+                        "instructions": m.food_instructions or m.notes or "As prescribed",
                     }
-                    for m in rx.medications
+                    for m in rx.items
                 ],
             }
             for rx in prescriptions
@@ -679,7 +696,11 @@ class PatientService:
                     if next_appt.dentist
                     else "Attending Dentist"
                 ),
-                "purpose": next_appt.appointment_type or "Dental Examination",
+                "purpose": (
+                    next_appt.visit_type.value
+                    if hasattr(next_appt.visit_type, "value")
+                    else str(next_appt.visit_type)
+                ) or "Dental Examination",
                 "instructions": (
                     next_appt.notes
                     or "Please arrive 10 minutes prior to scheduled time."
