@@ -1,6 +1,16 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +30,11 @@ from app.schemas.patient import (
     PatientRead,
     PatientUpdate,
     TimelineRead,
+)
+from app.schemas.patient_report import (
+    PatientReportGenerateRequest,
+    PatientReportResponse,
+    PatientReportShareRequest,
 )
 from app.schemas.treatment import TreatmentRead
 from app.services.patient_service import PatientService
@@ -300,5 +315,77 @@ async def list_patient_treatments_endpoint(
         )
     service = TreatmentService(db)
     return await service.list_by_patient(actor.clinic_id, patient_id)
+
+
+@router.post(
+    "/{patient_id}/reports/generate",
+    response_model=PatientReportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate comprehensive patient report PDF",
+    description="Compiles an official patient clinical report PDF with selectable sections, archives it in patient documents, logs an audit record, and returns WhatsApp share links.",
+)
+async def generate_patient_report_endpoint(
+    patient_id: UUID,
+    payload: PatientReportGenerateRequest,
+    request: Request,
+    actor: User = Depends(require_roles(*WRITE_ROLES)),
+    db: AsyncSession = Depends(get_db),
+) -> PatientReportResponse:
+    service = PatientService(db, actor)
+    storage = getattr(request.app.state, "storage", None)
+    _, response_meta = await service.generate_patient_report(
+        patient_id=patient_id,
+        payload=payload,
+        storage_service=storage,
+    )
+    return response_meta
+
+
+@router.get(
+    "/{patient_id}/reports/download",
+    summary="Download or stream patient report PDF",
+    description="Generates and streams the patient report PDF on demand.",
+)
+async def download_patient_report_endpoint(
+    patient_id: UUID,
+    report_number: str | None = Query(None),
+    watermark: bool = Query(False),
+    actor: User = Depends(require_roles(*WRITE_ROLES)),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    service = PatientService(db, actor)
+    payload = PatientReportGenerateRequest(
+        save_to_documents=False,
+        include_watermark=watermark,
+    )
+    pdf_bytes, meta = await service.generate_patient_report(
+        patient_id=patient_id,
+        payload=payload,
+        storage_service=None,
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{meta.file_name}"',
+            "Cache-Control": "no-cache",
+        },
+    )
+
+
+@router.post(
+    "/{patient_id}/reports/share",
+    summary="Share patient report and record audit trail",
+    description="Records an audited report sharing event (WhatsApp, Email, Folder) and dispatches email if selected.",
+)
+async def share_patient_report_endpoint(
+    patient_id: UUID,
+    payload: PatientReportShareRequest,
+    actor: User = Depends(require_roles(*WRITE_ROLES)),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    service = PatientService(db, actor)
+    return await service.share_patient_report(patient_id, payload)
+
 
 

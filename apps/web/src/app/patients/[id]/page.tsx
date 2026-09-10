@@ -13,6 +13,7 @@ import {
   Download,
   Edit2,
   FileCheck,
+  FileDown,
   FileText,
   HeartPulse,
   Mail,
@@ -40,6 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookingModal } from "@/components/appointments/booking-modal";
 import { AppointmentDetailDialog } from "@/components/appointments/appointment-detail-dialog";
 import { OdontogramCanvas } from "@/components/odontogram/odontogram-canvas";
+import { PatientReportModal } from "@/components/patients/patient-report-modal";
 import { DentitionType, NumberingSystem, PatientOdontogram, Tooth } from "./odontogram/types";
 
 type MedicalHistory = {
@@ -142,6 +144,7 @@ export default function PatientProfilePage({
   const [activeTab, setActiveTab] = useState("overview");
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -407,6 +410,17 @@ export default function PatientProfilePage({
               >
                 <Upload size={13} /> Upload File
               </button>
+              {!isArchived && (
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-semibold text-xs rounded-md shadow-2xs transition-colors"
+                  title="Generate Official Comprehensive Patient Clinical Report & Share on WhatsApp"
+                >
+                  <FileDown size={13} className="text-teal-700 dark:text-teal-400" />
+                  Generate Patient Report
+                </button>
+              )}
               {isArchived ? (
                 <button
                   onClick={() => restoreMutation.mutate()}
@@ -1674,6 +1688,17 @@ export default function PatientProfilePage({
         onUpdated={() => {
           setSelectedAppointment(null);
           void queryClient.invalidateQueries({ queryKey: ["patient-appointments", id] });
+          void queryClient.invalidateQueries({ queryKey: ["patient-timeline", id] });
+        }}
+      />
+
+      {/* Comprehensive Patient Report Generator & WhatsApp Dialog */}
+      <PatientReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        patient={patient}
+        onReportSaved={() => {
+          void queryClient.invalidateQueries({ queryKey: ["patient-documents", id] });
           void queryClient.invalidateQueries({ queryKey: ["patient-timeline", id] });
         }}
       />

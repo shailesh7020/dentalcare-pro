@@ -49,3 +49,18 @@ class StorageHealthService:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
         return key, f"/storage/{key}"
+
+    async def save_patient_bytes(
+        self,
+        clinic_id: UUID,
+        patient_id: UUID,
+        content: bytes,
+        filename: str,
+    ) -> tuple[str, str]:
+        extension = Path(filename).suffix.lower() or ".pdf"
+        key = f"patients/{clinic_id}/{patient_id}/{uuid4().hex}{extension}"
+        target = self._settings.storage_local_path / key
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
+        return key, f"/storage/{key}"
+
