@@ -282,6 +282,7 @@ import pytest
 async def test_patient_service_generate_and_share_report():
     from datetime import date
     from types import SimpleNamespace
+
     from app.models.identity import Clinic, Role, User
     from app.models.patient import DentalHistory, MedicalHistory, Patient
     from app.schemas.patient_report import PatientReportGenerateRequest, PatientReportShareRequest
@@ -344,7 +345,7 @@ async def test_patient_service_generate_and_share_report():
             return SimpleNamespace(
                 scalar_one_or_none=lambda: one,
                 scalars=lambda: SimpleNamespace(
-                    all=lambda: [],
+                    all=list,
                     first=lambda: None,
                 ),
             )
@@ -359,7 +360,12 @@ async def test_patient_service_generate_and_share_report():
     svc.repository.duplicates = lambda *args, **kwargs: _async_return([patient])  # type: ignore[method-assign]
     svc.repository.histories = lambda pid: _async_return((patient.medical_history, patient.dental_history))  # type: ignore[method-assign]
 
-    from app.schemas.patient import DentalHistoryInput, MedicalHistoryInput, PatientInput, PatientUpdate
+    from app.schemas.patient import (
+        DentalHistoryInput,
+        MedicalHistoryInput,
+        PatientInput,
+        PatientUpdate,
+    )
 
     await svc.get(patient.id, viewed=True)
     created_patient, warnings = await svc.create(
