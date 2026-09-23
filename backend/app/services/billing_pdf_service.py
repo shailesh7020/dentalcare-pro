@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
@@ -10,17 +11,21 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import (
     HRFlowable,
-    Image as PlatypusImage,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
 )
+from reportlab.platypus import (
+    Image as PlatypusImage,
+)
 
 from app.schemas.billing import InvoiceDetail, PaymentDetail
 from app.services.qr_service import QRCodeService
 from app.services.signature_service import ClinicianSignatureService
+
+logger = logging.getLogger(__name__)
 
 
 class BillingPDFService:
@@ -37,8 +42,8 @@ class BillingPDFService:
             if p.exists():
                 try:
                     return PlatypusImage(str(p), width=width, height=height)
-                except Exception:
-                    pass
+                except (OSError, ValueError, TypeError) as exc:
+                    logger.warning("Unable to load clinic logo from %s: %s", p, exc)
         return None
 
     @staticmethod

@@ -601,17 +601,11 @@ class PatientReportPDFService:
             legend_text = (
                 "<b>How to read your tooth chart:</b> Each box shows a tooth number and its health condition. "
                 "<font color='#059669'><b>Healthy</b></font> = Sound tooth &bull; "
-                "<font color='#dc2626'><b>Cavity</b></font> = Needs filling ({caries}) &bull; "
-                "<font color='#7c3aed'><b>RCT</b></font> = Root Canal ({rct}) &bull; "
-                "<font color='#d97706'><b>Crown</b></font> = Cap ({crowns}) &bull; "
-                "<font color='#0284c7'><b>Implant</b></font> ({implants}) &bull; "
-                "<font color='#64748b'><b>Missing</b></font> ({missing})".format(
-                    caries=caries_cnt,
-                    rct=rct_cnt,
-                    crowns=crown_cnt,
-                    implants=implant_cnt,
-                    missing=missing_cnt,
-                )
+                f"<font color='#dc2626'><b>Cavity</b></font> = Needs filling ({caries_cnt}) &bull; "
+                f"<font color='#7c3aed'><b>RCT</b></font> = Root Canal ({rct_cnt}) &bull; "
+                f"<font color='#d97706'><b>Crown</b></font> = Cap ({crown_cnt}) &bull; "
+                f"<font color='#0284c7'><b>Implant</b></font> ({implant_cnt}) &bull; "
+                f"<font color='#64748b'><b>Missing</b></font> ({missing_cnt})"
             )
             story.append(Paragraph(legend_text, meta_style))
 

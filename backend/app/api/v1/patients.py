@@ -112,6 +112,7 @@ async def whatsapp_gateway_send_pdf(
     actor: User = Depends(current_user),
 ) -> dict:
     import base64
+
     from app.services.notifications.providers.whatsapp import WhatsAppNotificationProvider
 
     phone = str(payload.get("phone") or "").strip()

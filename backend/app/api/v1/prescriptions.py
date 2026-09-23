@@ -412,7 +412,9 @@ async def send_prescription_whatsapp(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     import re
+
     from sqlalchemy import select
+
     from app.models.patient import Patient
     from app.services.notifications.providers.whatsapp import WhatsAppNotificationProvider
 

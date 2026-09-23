@@ -48,8 +48,9 @@ class PrescriptionService:
         diagnosis: str = "General Dental Consultation",
         issue_immediately: bool = False,
     ) -> tuple[Patient, Treatment, Appointment, User]:
-        from datetime import time as dt_time
         import uuid as uuid_pkg
+        from datetime import time as dt_time
+
         from app.models.appointment import AppointmentStatus, Chair, ChairStatus, VisitType
         from app.models.treatment import TreatmentStatus
 

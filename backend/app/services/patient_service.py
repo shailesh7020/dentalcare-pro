@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 import urllib.parse
 from datetime import UTC, datetime, timedelta
@@ -12,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
-
 from app.models import (
     AuditEvent,
     DentalHistory,
@@ -901,7 +901,13 @@ class PatientService:
                     if file_path.exists() and file_path.is_file():
                         pdf_bytes = file_path.read_bytes()
                         file_name = doc.file_name or file_name
-                except Exception:
+                except (OSError, ValueError, HTTPException) as exc:
+                    logging.getLogger(__name__).warning(
+                        "Unable to read stored report %s for patient %s: %s",
+                        payload.report_id,
+                        patient_id,
+                        exc,
+                    )
                     pdf_bytes = None
 
             if not pdf_bytes:

@@ -33,7 +33,7 @@ class WhatsAppNotificationProvider(NotificationChannelProvider):
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
             logger.warning("Could not auto-start WhatsApp gateway: %s", exc)
 
     @classmethod
@@ -41,8 +41,9 @@ class WhatsAppNotificationProvider(NotificationChannelProvider):
         async with httpx.AsyncClient(timeout=5.0) as client:
             try:
                 resp = await client.get(f"{WA_GATEWAY_URL}/status")
+                resp.raise_for_status()
                 return resp.json()
-            except Exception:
+            except (httpx.HTTPError, ValueError):
                 cls._ensure_gateway_running()
                 return {
                     "connected": False,
@@ -56,10 +57,12 @@ class WhatsAppNotificationProvider(NotificationChannelProvider):
         async with httpx.AsyncClient(timeout=15.0) as client:
             try:
                 resp = await client.post(
-                    f"{WA_GATEWAY_URL}/pairing-code", json={"phone": phone}
+                    f"{WA_GATEWAY_URL}/pairing-code",
+                    json={"phone": phone},
                 )
+                resp.raise_for_status()
                 return resp.json()
-            except Exception as exc:
+            except (httpx.HTTPError, ValueError) as exc:
                 return {"success": False, "message": str(exc)}
 
     @classmethod
@@ -87,8 +90,12 @@ class WhatsAppNotificationProvider(NotificationChannelProvider):
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
-                resp = await client.post(f"{WA_GATEWAY_URL}/send-document", json=payload)
+                resp = await client.post(
+                    f"{WA_GATEWAY_URL}/send-document",
+                    json=payload,
+                )
                 data = resp.json()
+
                 if resp.status_code == 200 and data.get("success"):
                     return {
                         "success": True,
@@ -98,14 +105,19 @@ class WhatsAppNotificationProvider(NotificationChannelProvider):
                         "message_id": data.get("message_id"),
                         "message": f"Directly sent PDF '{filename}' to {recipient} on WhatsApp!",
                     }
+
                 return data
-            except Exception as exc:
+
+            except (httpx.HTTPError, ValueError) as exc:
                 cls._ensure_gateway_running()
                 logger.error("WhatsApp Gateway error: %s", exc)
                 return {
                     "success": False,
                     "code": "GATEWAY_STARTING",
-                    "message": "WhatsApp Gateway is starting up. Please click Send again in 3 seconds.",
+                    "message": (
+                        "WhatsApp Gateway is starting up. "
+                        "Please click Send again in 3 seconds."
+                    ),
                 }
 
     async def send(
