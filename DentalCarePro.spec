@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['e:\\dentalcare-pro\\installer\\installer_gui.py'],
+    ['e:\\dentalcare-pro\\desktop\\launcher.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('e:\\dentalcare-pro\\desktop\\splash.html', '.'), ('e:\\dentalcare-pro\\desktop\\wizard.html', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='Install DentalCare Pro',
+    name='DentalCarePro',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

@@ -30,16 +30,24 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-# Paths
-INSTALLER_DIR = Path(__file__).resolve().parent
-ROOT_DIR = INSTALLER_DIR.parent
-RUNTIME_SRC = ROOT_DIR / "Dental Clinic Management Gift" / "Runtime"
-if not RUNTIME_SRC.exists():
-    RUNTIME_SRC = ROOT_DIR / "Runtime"
-if not RUNTIME_SRC.exists():
-    RUNTIME_SRC = INSTALLER_DIR / "Runtime"
+# Paths (Support both frozen PyInstaller .exe and script execution on any PC)
+EXE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+INSTALLER_DIR = EXE_DIR
+if (EXE_DIR / "Runtime").exists():
+    GIFT_FOLDER = EXE_DIR
+    ROOT_DIR = EXE_DIR.parent
+elif (EXE_DIR.parent / "Runtime").exists():
+    GIFT_FOLDER = EXE_DIR.parent
+    ROOT_DIR = GIFT_FOLDER.parent
+else:
+    ROOT_DIR = EXE_DIR.parent
+    GIFT_FOLDER = ROOT_DIR / "Dental Clinic Management Gift"
 
-DEFAULT_INSTALL_DIR = Path(os.environ.get("PROGRAMFILES", "C:\\Program Files")) / "DentalCare Pro"
+RUNTIME_SRC = GIFT_FOLDER / "Runtime"
+if not RUNTIME_SRC.exists():
+    RUNTIME_SRC = EXE_DIR / "Runtime"
+
+DEFAULT_INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "DentalCarePro" / "app"
 LOCAL_APPDATA = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "DentalCarePro"
 LOGS_DIR = LOCAL_APPDATA / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -71,6 +79,63 @@ def check_postgres_running(host="127.0.0.1", port=5432):
         return res == 0
     except Exception:
         return False
+
+
+def ensure_new_pc_prerequisites(status_cb=None):
+    """Automatically install/start Node.js LTS, PostgreSQL, and WebView2 on a brand-new PC."""
+    flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
+    # 1. Check & install Node.js LTS (for Web UI & WhatsApp PDF Engine)
+    node_exists = shutil.which("node") or Path(r"C:\Program Files\nodejs\node.exe").exists()
+    if not node_exists:
+        if status_cb:
+            status_cb("Installing Node.js Runtime for Web & WhatsApp Engine...", 20)
+        try:
+            subprocess.run(
+                ["winget", "install", "-e", "--id", "OpenJS.NodeJS.LTS", "--silent", "--accept-package-agreements", "--accept-source-agreements"],
+                creationflags=flags,
+                timeout=180,
+            )
+        except Exception as e:
+            log(f"Node.js auto-install note: {e}")
+
+    # 2. Check & start/install PostgreSQL Server (port 5432)
+    if not check_postgres_running():
+        if status_cb:
+            status_cb("Starting or installing local PostgreSQL Database...", 30)
+        # Try starting existing Windows PostgreSQL service first
+        for svc in ["postgresql-x64-18", "postgresql-x64-17", "postgresql-x64-16", "postgresql-x64-15"]:
+            try:
+                subprocess.run(["net", "start", svc], creationflags=flags, capture_output=True, timeout=10)
+                if check_postgres_running():
+                    break
+            except Exception:
+                pass
+
+        if not check_postgres_running():
+            try:
+                subprocess.run(
+                    ["winget", "install", "-e", "--id", "PostgreSQL.PostgreSQL.16", "--silent", "--accept-package-agreements", "--accept-source-agreements"],
+                    creationflags=flags,
+                    timeout=240,
+                )
+            except Exception as e:
+                log(f"PostgreSQL auto-install note: {e}")
+
+    # 3. Check & install Microsoft Edge WebView2 Runtime
+    edge_exists = (
+        Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe").exists()
+        or Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe").exists()
+    )
+    if not edge_exists:
+        try:
+            subprocess.run(
+                ["winget", "install", "-e", "--id", "Microsoft.EdgeWebView2Runtime", "--silent", "--accept-package-agreements", "--accept-source-agreements"],
+                creationflags=flags,
+                timeout=120,
+            )
+        except Exception as e:
+            log(f"WebView2 auto-install note: {e}")
 
 
 def check_internet_connection():
@@ -413,22 +478,27 @@ class InstallerApp(tk.Tk):
             (target_dir / "assets").mkdir(parents=True, exist_ok=True)
             (target_dir / "config").mkdir(parents=True, exist_ok=True)
 
-            steps = [
-                ("Deploying DentalCarePro.exe desktop application shell...", 15),
-                ("Extracting DentalCarePro-API.exe clinical engine...", 35),
-                ("Configuring backup_manager.exe and updater.exe utilities...", 55),
-                ("Deploying application icons, branding, and clinical assets...", 75),
-                ("Applying PostgreSQL database migrations...", 90),
-                ("Creating desktop shortcuts & registering Windows uninstaller...", 100),
-            ]
-
-            gift_runtime = ROOT_DIR / "Dental Clinic Management Gift" / "Runtime"
-            src_dirs = [gift_runtime, ROOT_DIR / "dist"]
-
-            for msg, pct in steps:
+            def update_status(msg, pct):
                 self.lbl_status.config(text=msg)
                 self.progress_bar["value"] = pct
                 self.update()
+
+            update_status("Checking & installing new PC prerequisites (Node.js, PostgreSQL, WebView2)...", 10)
+            ensure_new_pc_prerequisites(status_cb=update_status)
+
+            steps = [
+                ("Deploying DentalCarePro.exe desktop application shell...", 35),
+                ("Extracting DentalCarePro-API.exe clinical engine...", 55),
+                ("Configuring backup_manager.exe and updater.exe utilities...", 70),
+                ("Deploying application icons, branding, and clinical assets...", 82),
+                ("Creating database, applying schema & seeding Doctor account...", 92),
+                ("Creating desktop shortcuts & registering Windows uninstaller...", 100),
+            ]
+
+            src_dirs = [RUNTIME_SRC, GIFT_FOLDER / "Runtime", ROOT_DIR / "dist"]
+
+            for msg, pct in steps:
+                update_status(msg, pct)
                 time.sleep(0.15)
 
             # Copy runtime files
@@ -443,7 +513,7 @@ class InstallerApp(tk.Tk):
 
             # Copy backend/DentalCarePro-API.exe
             api_found = None
-            for s in [gift_runtime / "backend", ROOT_DIR / "dist" / "backend"]:
+            for s in [RUNTIME_SRC / "backend", GIFT_FOLDER / "Runtime" / "backend", ROOT_DIR / "dist" / "backend"]:
                 if (s / "DentalCarePro-API.exe").exists():
                     api_found = s / "DentalCarePro-API.exe"
                     break
@@ -452,7 +522,7 @@ class InstallerApp(tk.Tk):
 
             # Copy assets & branding
             for asset_item in ["app_icon.ico", "app_icon.png", "installer_banner.bmp", "splash_screen.png"]:
-                for s in [ROOT_DIR / "assets" / "branding", gift_runtime / "assets", ROOT_DIR / "dist" / "assets"]:
+                for s in [RUNTIME_SRC / "assets", GIFT_FOLDER / "Resources", ROOT_DIR / "assets" / "branding"]:
                     if (s / asset_item).exists():
                         shutil.copy2(s / asset_item, target_dir / "assets" / asset_item)
                         break
@@ -461,30 +531,42 @@ class InstallerApp(tk.Tk):
             if icon_src.exists():
                 shutil.copy2(icon_src, target_dir / "app_icon.ico")
 
-            # Default config
-            cfg_file = target_dir / "config" / "default_config.json"
-            if not cfg_file.exists() or self.install_mode_var.get() == "fresh":
-                default_cfg = {
-                    "VERSION": "23.0.0",
-                    "PORT": 8000,
-                    "CLINIC_NAME": "Dental Practice",
-                    "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/dentalcare",
-                    "BACKUP_PATH": "C:\\DentalCarePro_Backups",
-                    "THEME": "dark-teal",
-                    "TIMEZONE": "Asia/Kolkata",
-                    "LANGUAGE": "en-US"
-                }
-                import json
-                cfg_file.write_text(json.dumps(default_cfg, indent=2), encoding="utf-8")
+            # Resolve PROJECT_ROOT (folder containing apps/web & scripts/whatsapp-gateway.mjs)
+            proj_root = ROOT_DIR
+            for cand in [ROOT_DIR, GIFT_FOLDER.parent, EXE_DIR.parent, Path(r"e:\dentalcare-pro"), Path(r"c:\dentalcare-pro")]:
+                if cand and (cand / "apps" / "web").exists():
+                    proj_root = cand
+                    break
 
-            # Run migrations if selected
+            # Save zero-configuration config.json so the Doctor goes straight into the app without wizard prompts
+            import json
+            default_cfg = {
+                "VERSION": "23.0.0",
+                "PORT": 8000,
+                "CLINIC_NAME": "DentalCare Pro Clinic",
+                "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/dentalcare",
+                "BACKUP_PATH": "C:\\DentalCarePro_Backups",
+                "PROJECT_ROOT": str(proj_root),
+                "SETUP_COMPLETE": True,
+                "THEME": "dark-teal",
+                "TIMEZONE": "Asia/Kolkata",
+                "LANGUAGE": "en-US"
+            }
+            cfg_file = target_dir / "config" / "default_config.json"
+            cfg_file.write_text(json.dumps(default_cfg, indent=2), encoding="utf-8")
+
+            user_cfg_file = LOCAL_APPDATA / "config.json"
+            LOCAL_APPDATA.mkdir(parents=True, exist_ok=True)
+            user_cfg_file.write_text(json.dumps(default_cfg, indent=2), encoding="utf-8")
+
+            # Run migrations & auto-seed Doctor login (admin@dentalcare.com / Password123!)
             if self.run_migrations_var.get() and (target_dir / "backend" / "DentalCarePro-API.exe").exists():
                 try:
                     subprocess.run(
                         [str(target_dir / "backend" / "DentalCarePro-API.exe"), "--migrate"],
                         capture_output=True,
                         creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
-                        timeout=15
+                        timeout=25
                     )
                 except Exception as ex:
                     log(f"Migration note during setup: {ex}")
@@ -517,12 +599,13 @@ class InstallerApp(tk.Tk):
 
     def perform_silent_install(self):
         try:
+            ensure_new_pc_prerequisites()
             target_dir = Path(self.install_dir_var.get())
             target_dir.mkdir(parents=True, exist_ok=True)
             (target_dir / "backend").mkdir(parents=True, exist_ok=True)
+            (target_dir / "config").mkdir(parents=True, exist_ok=True)
 
-            gift_runtime = ROOT_DIR / "Dental Clinic Management Gift" / "Runtime"
-            src_dirs = [gift_runtime, ROOT_DIR / "dist"]
+            src_dirs = [RUNTIME_SRC, GIFT_FOLDER / "Runtime", ROOT_DIR / "dist"]
 
             for fname in ["DentalCarePro.exe", "backup_manager.exe", "updater.exe", "uninstall.exe", "splash.html", "wizard.html"]:
                 for s in src_dirs:
@@ -530,10 +613,27 @@ class InstallerApp(tk.Tk):
                         shutil.copy2(s / fname, target_dir / fname)
                         break
 
-            for s in [gift_runtime / "backend", ROOT_DIR / "dist" / "backend"]:
+            for s in [RUNTIME_SRC / "backend", GIFT_FOLDER / "Runtime" / "backend", ROOT_DIR / "dist" / "backend"]:
                 if (s / "DentalCarePro-API.exe").exists():
                     shutil.copy2(s / "DentalCarePro-API.exe", target_dir / "backend" / "DentalCarePro-API.exe")
                     break
+
+            import json
+            default_cfg = {
+                "VERSION": "23.0.0",
+                "PORT": 8000,
+                "CLINIC_NAME": "DentalCare Pro Clinic",
+                "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/dentalcare",
+                "BACKUP_PATH": "C:\\DentalCarePro_Backups",
+                "PROJECT_ROOT": str(ROOT_DIR),
+                "SETUP_COMPLETE": True,
+                "THEME": "dark-teal",
+                "TIMEZONE": "Asia/Kolkata",
+                "LANGUAGE": "en-US"
+            }
+            (target_dir / "config" / "default_config.json").write_text(json.dumps(default_cfg, indent=2), encoding="utf-8")
+            LOCAL_APPDATA.mkdir(parents=True, exist_ok=True)
+            (LOCAL_APPDATA / "config.json").write_text(json.dumps(default_cfg, indent=2), encoding="utf-8")
 
             register_uninstaller(target_dir, display_version="23.0.0")
             log("Silent installation completed successfully.")

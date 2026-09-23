@@ -90,31 +90,81 @@ class BackendSupervisor:
             return False
 
     def find_project_root(self) -> Path:
-        candidates = [
+        candidates = []
+        # 1. Check saved PROJECT_ROOT in %LOCALAPPDATA%\DentalCarePro\config.json
+        if CONFIG_FILE.exists():
+            try:
+                cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+                if cfg.get("PROJECT_ROOT"):
+                    candidates.append(Path(cfg["PROJECT_ROOT"]))
+            except Exception:
+                pass
+
+        exe_dir = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else BASE_DIR
+        local_default_cfg = exe_dir / "config" / "default_config.json"
+        if local_default_cfg.exists():
+            try:
+                cfg = json.loads(local_default_cfg.read_text(encoding="utf-8"))
+                if cfg.get("PROJECT_ROOT"):
+                    candidates.append(Path(cfg["PROJECT_ROOT"]))
+            except Exception:
+                pass
+
+        user_home = Path.home()
+        candidates.extend([
+            exe_dir,
+            exe_dir.parent,
+            exe_dir.parent.parent,
             Path(r"e:\dentalcare-pro"),
+            Path(r"c:\dentalcare-pro"),
+            Path(r"d:\dentalcare-pro"),
+            user_home / "Desktop" / "dentalcare-pro",
+            user_home / "Downloads" / "dentalcare-pro",
+            user_home / "dentalcare-pro",
             ROOT_DIR,
             BASE_DIR.parent.parent,
-        ]
+        ])
         for c in candidates:
-            if (c / "apps" / "web").exists():
-                return c
+            try:
+                if c and (c / "apps" / "web").exists():
+                    return c
+            except Exception:
+                continue
         return ROOT_DIR
 
     def find_api_binary(self) -> Path:
+        exe_dir = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else BASE_DIR
         candidates = [
+            exe_dir / "backend" / "DentalCarePro-API.exe",
+            exe_dir / "DentalCarePro-API.exe",
             BASE_DIR / "backend" / "DentalCarePro-API.exe",
             BASE_DIR / "DentalCarePro-API.exe",
             ROOT_DIR / "dist" / "backend" / "DentalCarePro-API.exe",
-            ROOT_DIR / "dist" / "DentalCarePro_v1.0.0_Portable" / "backend" / "DentalCarePro-API.exe",
-            Path(sys.executable).parent / "backend" / "DentalCarePro-API.exe",
-            Path(sys.executable).parent / "DentalCarePro-API.exe",
+            ROOT_DIR / "Dental Clinic Management Gift" / "Runtime" / "backend" / "DentalCarePro-API.exe",
         ]
         for c in candidates:
             if c.exists():
                 return c
         return None
 
+    def ensure_environment_paths(self):
+        """Ensure Node.js and PostgreSQL standard Windows installation directories are in PATH."""
+        extra_paths = [
+            r"C:\Program Files\nodejs",
+            r"C:\Program Files (x86)\nodejs",
+            r"C:\Program Files\PostgreSQL\18\bin",
+            r"C:\Program Files\PostgreSQL\17\bin",
+            r"C:\Program Files\PostgreSQL\16\bin",
+            r"C:\Program Files\PostgreSQL\15\bin",
+        ]
+        current_path = os.environ.get("PATH", "")
+        for p in extra_paths:
+            if Path(p).exists() and p.lower() not in current_path.lower():
+                current_path = f"{p};{current_path}"
+        os.environ["PATH"] = current_path
+
     def start(self):
+        self.ensure_environment_paths()
         startupinfo = None
         creationflags = 0
         if sys.platform == "win32":
@@ -124,6 +174,34 @@ class BackendSupervisor:
             creationflags = subprocess.CREATE_NO_WINDOW
 
         proj_root = self.find_project_root()
+        log(f"Resolved DentalCare Pro workspace root: {proj_root}")
+
+        # Auto-install node_modules on first launch if missing on a brand-new PC
+        if (proj_root / "package.json").exists() and not (proj_root / "node_modules").exists():
+            try:
+                log("Installing root node_modules for first-time setup...")
+                subprocess.run(
+                    ["cmd.exe", "/c", "npm install --no-audit --no-fund"],
+                    cwd=str(proj_root),
+                    startupinfo=startupinfo,
+                    creationflags=creationflags,
+                    timeout=180,
+                )
+            except Exception as e:
+                log(f"Root npm install note: {e}")
+
+        if (proj_root / "apps" / "web" / "package.json").exists() and not (proj_root / "apps" / "web" / "node_modules").exists() and not (proj_root / "node_modules").exists():
+            try:
+                log("Installing apps/web node_modules for first-time setup...")
+                subprocess.run(
+                    ["cmd.exe", "/c", "npm install --no-audit --no-fund"],
+                    cwd=str(proj_root / "apps" / "web"),
+                    startupinfo=startupinfo,
+                    creationflags=creationflags,
+                    timeout=180,
+                )
+            except Exception as e:
+                log(f"Web npm install note: {e}")
 
         # 1. Ensure WhatsApp Gateway is running on port 4050
         wa_script = proj_root / "scripts" / "whatsapp-gateway.mjs"
@@ -151,36 +229,34 @@ class BackendSupervisor:
                 log(f"Web UI start note: {e}")
 
         # 3. Ensure Backend API (port 8000) is running
-        if self.is_healthy():
-            log(f"DentalCare Pro API is already running and healthy on port {self.port}.")
-            return
+        if not self.is_healthy():
+            exe_path = self.find_api_binary()
+            py_entry = proj_root / "backend" / "desktop_entry.py"
+            if exe_path:
+                log(f"Starting standalone backend binary: {exe_path}")
+                self.proc = subprocess.Popen(
+                    [str(exe_path), "--host", "0.0.0.0", "--port", str(self.port)],
+                    startupinfo=startupinfo,
+                    creationflags=creationflags,
+                )
+            elif py_entry.exists():
+                log(f"Starting backend via python entrypoint: {py_entry}")
+                self.proc = subprocess.Popen(
+                    [sys.executable, str(py_entry), "--host", "0.0.0.0", "--port", str(self.port)],
+                    cwd=str(proj_root / "backend"),
+                    startupinfo=startupinfo,
+                    creationflags=creationflags,
+                )
+            else:
+                log("WARNING: Neither DentalCarePro-API.exe nor desktop_entry.py found.")
 
-        exe_path = self.find_api_binary()
-        py_entry = proj_root / "backend" / "desktop_entry.py"
-        if py_entry.exists():
-            log(f"Starting backend via python entrypoint: {py_entry}")
-            self.proc = subprocess.Popen(
-                [sys.executable, str(py_entry), "--host", "0.0.0.0", "--port", str(self.port)],
-                cwd=str(proj_root / "backend"),
-                startupinfo=startupinfo,
-                creationflags=creationflags,
-            )
-        elif exe_path:
-            log(f"Starting standalone backend binary: {exe_path}")
-            self.proc = subprocess.Popen(
-                [str(exe_path), "--host", "0.0.0.0", "--port", str(self.port)],
-                startupinfo=startupinfo,
-                creationflags=creationflags,
-            )
-        else:
-            log("WARNING: Neither DentalCarePro-API.exe nor desktop_entry.py found.")
-
+        # Wait up to 20 seconds for Backend API (8000) and Web UI (3000) to be ready
         attempts = 0
-        while attempts < 15:
-            time.sleep(1)
-            if self.is_healthy():
-                log(f"DentalCare Pro API verified healthy on port {self.port}.")
+        while attempts < 20:
+            if self.is_healthy() and (self.is_web_healthy() or attempts >= 8):
+                log(f"DentalCare Pro services verified ready (API: {self.is_healthy()}, Web: {self.is_web_healthy()}).")
                 return
+            time.sleep(1)
             attempts += 1
 
         log("WARNING: API did not respond to health check within 15 seconds.")

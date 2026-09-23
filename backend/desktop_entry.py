@@ -86,9 +86,47 @@ def load_desktop_configuration() -> dict:
     return defaults
 
 
+def ensure_database_exists():
+    """Automatically create the 'dentalcare' database in PostgreSQL if it does not exist yet on a brand-new PC."""
+    import asyncio
+    async def _create_db():
+        try:
+            import asyncpg
+            conn = await asyncpg.connect("postgresql://postgres:postgres@127.0.0.1:5432/postgres", timeout=4)
+            try:
+                exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = 'dentalcare'")
+                if not exists:
+                    logger.info("Creating 'dentalcare' database in PostgreSQL for first-time setup...")
+                    await conn.execute('CREATE DATABASE "dentalcare"')
+                    logger.info("Created 'dentalcare' database successfully!")
+            finally:
+                await conn.close()
+        except Exception as e:
+            logger.info(f"Database auto-creation check note: {e}")
+
+    try:
+        asyncio.run(_create_db())
+    except Exception as e:
+        logger.warning(f"Could not run ensure_database_exists: {e}")
+
+
+def ensure_default_seed():
+    """Automatically seed default Clinic, Operatory Chairs, and Doctor Login (admin@dentalcare.com / Password123!) on a new PC."""
+    import asyncio
+    try:
+        if "DEMO_SEED_PASSWORD" not in os.environ:
+            os.environ["DEMO_SEED_PASSWORD"] = "Password123!"
+        from app.scripts.seed import seed
+        asyncio.run(seed())
+        logger.info("Verified default clinic & doctor login (admin@dentalcare.com).")
+    except Exception as e:
+        logger.info(f"Default seed check note: {e}")
+
+
 def run_migrations():
-    """Apply Alembic migrations programmatically."""
-    logger.info("Executing database migrations...")
+    """Apply Alembic migrations programmatically and ensure database + default accounts exist."""
+    logger.info("Ensuring database exists and executing database migrations...")
+    ensure_database_exists()
     try:
         from alembic import command
         from alembic.config import Config
@@ -102,6 +140,7 @@ def run_migrations():
         cfg.set_main_option("sqlalchemy.url", os.environ.get("DATABASE_URL"))
         command.upgrade(cfg, "head")
         logger.info("Database migrations successfully applied!")
+        ensure_default_seed()
         return True
     except Exception as e:
         logger.error(f"Migration failed: {e}", exc_info=True)
