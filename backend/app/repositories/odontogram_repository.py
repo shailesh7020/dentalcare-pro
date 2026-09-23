@@ -116,7 +116,7 @@ class OdontogramRepository:
             .order_by(Tooth.quadrant.asc(), Tooth.tooth_number.asc())
         )
         res = await self.db.execute(query)
-        return list(res.scalars().all())
+        return [t for t in res.scalars().all() if isinstance(t, Tooth)]
 
     async def get_or_initialize_odontogram(
         self,

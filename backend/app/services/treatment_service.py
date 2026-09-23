@@ -155,18 +155,21 @@ class TreatmentService:
         from app.services.odontogram_service import OdontogramService
 
         odontogram_svc = OdontogramService(self.db)
-        for proc in treatment.procedures:
-            if proc.tooth_number:
-                await odontogram_svc.sync_treatment_procedure(
-                    clinic_id=clinic_id,
-                    patient_id=patient.id,
-                    tooth_number_raw=proc.tooth_number,
-                    procedure_name=proc.procedure_name,
-                    procedure_id=proc.id,
-                    treatment_id=treatment.id,
-                    appointment_id=appointment.id,
-                    actor=actor,
-                )
+        for proc in treatment.procedures or []:
+            tooth_number = getattr(proc, "tooth_number", None)
+            if not tooth_number:
+                continue
+
+            await odontogram_svc.sync_treatment_procedure(
+                clinic_id=clinic_id,
+                patient_id=patient.id,
+                tooth_number_raw=tooth_number,
+                procedure_name=proc.procedure_name,
+                procedure_id=proc.id,
+                treatment_id=treatment.id,
+                appointment_id=appointment.id,
+                actor=actor,
+            )
 
         await self.db.commit()
 
@@ -250,18 +253,21 @@ class TreatmentService:
             from app.services.odontogram_service import OdontogramService
 
             odontogram_svc = OdontogramService(self.db)
-            for proc in updated.procedures:
-                if proc.tooth_number:
-                    await odontogram_svc.sync_treatment_procedure(
-                        clinic_id=clinic_id,
-                        patient_id=treatment.patient_id,
-                        tooth_number_raw=proc.tooth_number,
-                        procedure_name=proc.procedure_name,
-                        procedure_id=proc.id,
-                        treatment_id=treatment.id,
-                        appointment_id=treatment.appointment_id,
-                        actor=actor,
-                    )
+            for proc in updated.procedures or []:
+                tooth_number = getattr(proc, "tooth_number", None)
+                if not tooth_number:
+                    continue
+
+                await odontogram_svc.sync_treatment_procedure(
+                    clinic_id=clinic_id,
+                    patient_id=treatment.patient_id,
+                    tooth_number_raw=tooth_number,
+                    procedure_name=proc.procedure_name,
+                    procedure_id=proc.id,
+                    treatment_id=treatment.id,
+                    appointment_id=treatment.appointment_id,
+                    actor=actor,
+                )
 
         await self.db.commit()
         full = await self.repo.get_by_id(clinic_id, treatment.id)
