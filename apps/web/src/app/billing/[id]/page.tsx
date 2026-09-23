@@ -15,6 +15,7 @@ import {
   Clock,
   CreditCard,
   Download,
+  Eye,
   FileCheck,
   FileText,
   IndianRupee,
@@ -58,6 +59,8 @@ export default function InvoiceDetailPage({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedPaymentForRefund, setSelectedPaymentForRefund] =
+    useState<PaymentRead | null>(null);
+  const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] =
     useState<PaymentRead | null>(null);
 
   // Payment form state
@@ -170,7 +173,11 @@ export default function InvoiceDetailPage({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.setAttribute("download", `${invoice.invoice_number}.pdf`);
+      const cleanName = (invoice.patient_name || "Patient")
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .toUpperCase();
+      a.setAttribute("download", `${cleanName}_Invoice_${invoice.invoice_number}.pdf`);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -197,7 +204,11 @@ export default function InvoiceDetailPage({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.setAttribute("download", `${receiptNo}.pdf`);
+      const cleanName = (invoice?.patient_name || "Patient")
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .toUpperCase();
+      a.setAttribute("download", `${cleanName}_Receipt_${receiptNo}.pdf`);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -210,23 +221,41 @@ export default function InvoiceDetailPage({
     }
   };
 
-  // Share Receipt via WhatsApp
-  const handleSendReceiptWhatsApp = (payment: PaymentRead) => {
+  const blobToBase64 = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const res = String(reader.result || "");
+        resolve(res.includes(",") ? res.split(",")[1] : res);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+  // Directly Send Receipt PDF via WhatsApp
+  const handleSendReceiptWhatsApp = async (payment: PaymentRead) => {
     if (!invoice) return;
     const phone = (invoice.patient_phone || "").replace(/[^0-9]/g, "");
+    if (!phone) {
+      alert("Patient does not have a mobile phone number registered.");
+      return;
+    }
     const clinic = invoice.clinic_name || "DentalCare Pro";
     const patientName = invoice.patient_name || "Patient";
+    const cleanName = patientName.trim().replace(/[^a-zA-Z0-9]+/g, "_").toUpperCase();
+    const pdfFileName = `${cleanName}_Receipt_${payment.receipt_number}.pdf`;
+
     const dateStr =
       payment.payment_date ||
       (payment.created_at
         ? payment.created_at.slice(0, 10)
         : new Date().toISOString().slice(0, 10));
 
-    const text =
+    const caption =
 `🦷 *${clinic} - Payment Receipt*
 
 Dear ${patientName},
-Thank you for your payment. Here are your transaction details:
+Thank you for your payment. Please find your official PDF receipt attached above.
 
 🧾 *Receipt #:* ${payment.receipt_number}
 📅 *Date:* ${dateStr}
@@ -238,26 +267,55 @@ Thank you for your payment. Here are your transaction details:
 If you have any questions, please contact our clinic team.
 Wishing you great oral health! ✨`;
 
-    const encoded = encodeURIComponent(text);
-    const waUrl =
-      phone.length >= 10
-        ? `https://wa.me/${phone.length === 10 ? "91" + phone : phone}?text=${encoded}`
-        : `https://wa.me/?text=${encoded}`;
-    window.open(waUrl, "_blank");
+    try {
+      setDownloadingReceiptId(payment.id);
+      const pdfRes = await api.get(`/billing/payments/${payment.id}/receipt/pdf`, {
+        responseType: "blob",
+      });
+      const pdfBlob = new Blob([pdfRes.data as BlobPart], { type: "application/pdf" });
+      const pdfB64 = await blobToBase64(pdfBlob);
+
+      const sendRes = await api.post("/patients/whatsapp/send-pdf", {
+        phone,
+        filename: pdfFileName,
+        caption,
+        pdf_base64: pdfB64,
+      });
+
+      if (sendRes.data?.success) {
+        alert(`Directly sent PDF "${pdfFileName}" to ${patientName} (${phone}) on WhatsApp!`);
+      } else {
+        alert(
+          sendRes.data?.message ||
+            "Clinic WhatsApp is not linked yet. Please open the Patient Report modal and scan the Clinic WhatsApp QR code once."
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to send receipt PDF on WhatsApp:", err);
+      alert(err.response?.data?.message || "Failed to send receipt PDF via WhatsApp.");
+    } finally {
+      setDownloadingReceiptId(null);
+    }
   };
 
-  // Share Invoice via WhatsApp
-  const handleSendInvoiceWhatsApp = () => {
+  // Directly Send Invoice PDF via WhatsApp
+  const handleSendInvoiceWhatsApp = async () => {
     if (!invoice) return;
     const phone = (invoice.patient_phone || "").replace(/[^0-9]/g, "");
+    if (!phone) {
+      alert("Patient does not have a mobile phone number registered.");
+      return;
+    }
     const clinic = invoice.clinic_name || "DentalCare Pro";
     const patientName = invoice.patient_name || "Patient";
+    const cleanName = patientName.trim().replace(/[^a-zA-Z0-9]+/g, "_").toUpperCase();
+    const pdfFileName = `${cleanName}_Invoice_${invoice.invoice_number}.pdf`;
 
-    const text =
-`🦷 *${clinic} - Dental Invoice Summary*
+    const caption =
+`🦷 *${clinic} - Dental Invoice*
 
 Dear ${patientName},
-Here is the invoice summary for your visit:
+Please find your official invoice PDF attached above:
 
 📑 *Invoice #:* ${invoice.invoice_number}
 📅 *Date:* ${invoice.date || invoice.created_at.slice(0, 10)}
@@ -268,12 +326,35 @@ Here is the invoice summary for your visit:
 
 Thank you for choosing ${clinic}! ✨`;
 
-    const encoded = encodeURIComponent(text);
-    const waUrl =
-      phone.length >= 10
-        ? `https://wa.me/${phone.length === 10 ? "91" + phone : phone}?text=${encoded}`
-        : `https://wa.me/?text=${encoded}`;
-    window.open(waUrl, "_blank");
+    try {
+      setDownloadingPdf(true);
+      const pdfRes = await api.get(`/billing/invoices/${id}/pdf`, {
+        responseType: "blob",
+      });
+      const pdfBlob = new Blob([pdfRes.data as BlobPart], { type: "application/pdf" });
+      const pdfB64 = await blobToBase64(pdfBlob);
+
+      const sendRes = await api.post("/patients/whatsapp/send-pdf", {
+        phone,
+        filename: pdfFileName,
+        caption,
+        pdf_base64: pdfB64,
+      });
+
+      if (sendRes.data?.success) {
+        alert(`Directly sent PDF "${pdfFileName}" to ${patientName} (${phone}) on WhatsApp!`);
+      } else {
+        alert(
+          sendRes.data?.message ||
+            "Clinic WhatsApp is not linked yet. Please open the Patient Report modal and scan the Clinic WhatsApp QR code once."
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to send invoice PDF on WhatsApp:", err);
+      alert(err.response?.data?.message || "Failed to send invoice PDF via WhatsApp.");
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   if (invoiceQuery.isLoading) {
@@ -723,6 +804,15 @@ Thank you for choosing ${clinic}! ✨`;
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {/* View / Print Receipt */}
+                            <button
+                              onClick={() => setSelectedPaymentForReceipt(p)}
+                              title="View & Print Official Receipt"
+                              className="p-1 text-slate-500 hover:text-emerald-600 rounded transition-colors"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
                             {/* Receipt PDF */}
                             <button
                               onClick={() => handleDownloadReceiptPdf(p.id, p.receipt_number)}
@@ -1079,6 +1169,190 @@ Thank you for choosing ${clinic}! ✨`;
                 className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
               >
                 {cancelInvoiceMutation.isPending ? "Cancelling..." : "Confirm Cancellation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RECEIPT PREVIEW MODAL */}
+      {selectedPaymentForReceipt && (
+        <div
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-150"
+          onClick={() => setSelectedPaymentForReceipt(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[95vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Payment Receipt
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Receipt #{selectedPaymentForReceipt.receipt_number}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  title="Print Receipt"
+                  className="p-1.5 text-slate-600 hover:text-teal-700 hover:bg-teal-50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDownloadReceiptPdf(
+                      selectedPaymentForReceipt.id,
+                      selectedPaymentForReceipt.receipt_number
+                    )
+                  }
+                  disabled={downloadingReceiptId === selectedPaymentForReceipt.id}
+                  title="Download PDF"
+                  className="p-1.5 text-slate-600 hover:text-teal-700 hover:bg-teal-50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
+                >
+                  <Download className="w-4 h-4" />
+                  PDF
+                </button>
+                <button
+                  onClick={() => setSelectedPaymentForReceipt(null)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold cursor-pointer ml-1"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Receipt Card Body */}
+            <div className="p-6 space-y-5 overflow-y-auto print:p-0">
+              {/* Clinic Branding */}
+              <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
+                <div className="space-y-1">
+                  <h4 className="text-base font-extrabold text-teal-700 dark:text-teal-400">
+                    {invoice?.clinic_name || "DentalCare Pro Clinic"}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {invoice?.clinic_address || "City Centre, Opp. General Hospital"}
+                    <br />
+                    Phone: {invoice?.clinic_phone || "+91 98765 43210"} | {invoice?.clinic_email || "contact@dentalcarepro.in"}
+                  </p>
+                </div>
+                <div className="text-right space-y-1">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    <CheckCircle2 className="w-3 h-3" />
+                    PAID & VERIFIED
+                  </span>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {selectedPaymentForReceipt.payment_date ||
+                      (selectedPaymentForReceipt.created_at
+                        ? selectedPaymentForReceipt.created_at.slice(0, 10)
+                        : new Date().toISOString().slice(0, 10))}
+                  </p>
+                </div>
+              </div>
+
+              {/* Amount Highlight Box */}
+              <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 text-center space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                  Amount Received
+                </span>
+                <div className="text-2xl font-black text-emerald-800 dark:text-emerald-300">
+                  ₹{selectedPaymentForReceipt.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Mode: <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedPaymentForReceipt.method}</span>
+                  {selectedPaymentForReceipt.transaction_reference && (
+                    <> • Ref / UTR: <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{selectedPaymentForReceipt.transaction_reference}</span></>
+                  )}
+                </p>
+              </div>
+
+              {/* Transaction & Patient Info Grid */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-xs space-y-2.5">
+                <div className="grid grid-cols-2 gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                  <div>
+                    <span className="text-slate-500 block">Received From:</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      {invoice?.patient_name || "Patient"}
+                    </span>
+                    <span className="text-slate-500 text-[10px] block">
+                      ID: {invoice?.patient_number || "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Doctor:</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      {invoice?.dentist_name || "Dental Surgeon"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                  <div>
+                    <span className="text-slate-500 block">Invoice Number:</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                      {invoice?.invoice_number}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Invoice Balance Remaining:</span>
+                    <span className={`font-bold ${invoice?.balance_due && invoice.balance_due > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                      ₹{(invoice?.balance_due ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedPaymentForReceipt.notes && (
+                  <div>
+                    <span className="text-slate-500 block">Payment Notes:</span>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      {selectedPaymentForReceipt.notes}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Official Seal & Stamp Box */}
+              <div className="p-3 bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800/60 rounded-xl text-center space-y-1">
+                <span className="text-[10px] font-bold text-teal-800 dark:text-teal-300 uppercase tracking-wider block">
+                  ★ Official Clinic Verification Seal ★
+                </span>
+                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  {invoice?.clinic_name || "DENTALCARE PRO CLINIC"}
+                </p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Tamper-evident computer generated receipt • Authorized for Tax & Insurance Claim
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+              <button
+                type="button"
+                onClick={() => handleSendReceiptWhatsApp(selectedPaymentForReceipt)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 cursor-pointer"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Share on WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPaymentForReceipt(null)}
+                className="px-4 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>

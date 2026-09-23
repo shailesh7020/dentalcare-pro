@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 
 from reportlab.lib import colors
@@ -9,6 +10,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import (
     HRFlowable,
+    Image as PlatypusImage,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -22,6 +24,53 @@ from app.services.signature_service import ClinicianSignatureService
 
 
 class BillingPDFService:
+    @staticmethod
+    def get_clinic_logo_flowable(width: float = 44, height: float = 44) -> PlatypusImage | None:
+        """Locates and creates a PlatypusImage flowable for the clinic branding logo."""
+        candidates = [
+            Path("e:/dentalcare-pro/assets/branding/app_icon.png"),
+            Path(__file__).resolve().parent.parent.parent.parent / "assets" / "branding" / "app_icon.png",
+            Path("Dental Clinic Management Gift/Clinic Logo/app_icon.png"),
+            Path("assets/branding/app_icon.png"),
+        ]
+        for p in candidates:
+            if p.exists():
+                try:
+                    return PlatypusImage(str(p), width=width, height=height)
+                except Exception:
+                    pass
+        return None
+
+    @staticmethod
+    def get_official_seal_flowable(
+        payment_date: str,
+        clinic_name: str = "DENTALCARE PRO CLINIC",
+        title: str = "OFFICIAL RECEIPT",
+        status_text: str = "PAID & VERIFIED",
+        signatory_label: str = "Cashier Sign",
+        primary_color: colors.Color = colors.HexColor("#0f766e"),
+    ) -> Table:
+        """Constructs an official, crisp vector clinic verification seal and signatory box."""
+        seal_table_data = [
+            [Paragraph(f"<b>{clinic_name}</b>", ParagraphStyle("ST", fontName="Helvetica-Bold", fontSize=8, textColor=primary_color, alignment=1))],
+            [Paragraph(f"<font color='#059669'><b>★ {title} ★</b></font>", ParagraphStyle("SS", fontName="Helvetica-Bold", fontSize=8.5, alignment=1))],
+            [Paragraph(f"<b>{status_text}</b>", ParagraphStyle("SV", fontName="Helvetica-Bold", fontSize=7.5, textColor=colors.HexColor("#475569"), alignment=1))],
+            [Paragraph(f"Date: {payment_date}", ParagraphStyle("SD", fontName="Helvetica", fontSize=7, textColor=colors.HexColor("#64748b"), alignment=1))],
+            [Paragraph(f"{signatory_label}: ________________", ParagraphStyle("SG", fontName="Helvetica", fontSize=7, textColor=colors.HexColor("#1e293b"), alignment=1))],
+        ]
+        seal_table = Table(seal_table_data, colWidths=[180])
+        seal_table.setStyle(
+            TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f0fdfa")),
+                ("BOX", (0, 0), (-1, -1), 1, primary_color),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ])
+        )
+        return seal_table
+
     @staticmethod
     def generate_invoice_pdf(
         invoice: InvoiceDetail,
@@ -138,22 +187,59 @@ class BillingPDFService:
         if invoice.due_date:
             doc_meta += f"<br/><b>Due Date:</b> {invoice.due_date.strftime('%d-%b-%Y')}"
 
-        header_table = Table(
-            [
+        logo_flowable = BillingPDFService.get_clinic_logo_flowable(width=44, height=44)
+        header_left = [
+            Paragraph(f"<b>{clinic_name}</b>", clinic_name_style),
+            Spacer(1, 2),
+            Paragraph(clinic_info, clinic_meta_style),
+        ]
+
+        if logo_flowable:
+            header_table = Table(
                 [
-                    Paragraph(f"<b>{clinic_name}</b>", clinic_name_style),
-                    Paragraph("TAX INVOICE", doc_title_style),
+                    [
+                        logo_flowable,
+                        header_left,
+                        Paragraph("TAX INVOICE", doc_title_style),
+                    ],
+                    [
+                        "",
+                        "",
+                        Paragraph(doc_meta, meta_style),
+                    ],
                 ],
+                colWidths=[52, 268, 203],
+            )
+            header_table.setStyle(
+                TableStyle([
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("SPAN", (0, 0), (0, 1)),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ])
+            )
+        else:
+            header_table = Table(
                 [
-                    Paragraph(clinic_info, clinic_meta_style),
-                    Paragraph(doc_meta, meta_style),
+                    [
+                        header_left,
+                        Paragraph("TAX INVOICE", doc_title_style),
+                    ],
+                    [
+                        "",
+                        Paragraph(doc_meta, meta_style),
+                    ],
                 ],
-            ],
-            colWidths=[320, 203],
-        )
-        header_table.setStyle(
-            TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)])
-        )
+                colWidths=[320, 203],
+            )
+            header_table.setStyle(
+                TableStyle([
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ])
+            )
+
         story.append(header_table)
         story.append(Spacer(1, 10))
         story.append(HRFlowable(width="100%", thickness=1.5, color=primary_color, spaceAfter=12))
@@ -220,10 +306,10 @@ class BillingPDFService:
                     Paragraph(f"<b>{it.description}</b>", cell_style),
                     Paragraph(it.item_type, cell_style),
                     Paragraph(str(it.quantity), cell_style),
-                    Paragraph(f"₹{it.unit_price:,.2f}", cell_style),
-                    Paragraph(f"₹{it.discount_amount:,.2f}" if it.discount_amount > 0 else "-", cell_style),
-                    Paragraph(f"₹{it.tax_amount:,.2f}" if it.tax_amount > 0 else "-", cell_style),
-                    Paragraph(f"₹{it.total:,.2f}", cell_bold),
+                    Paragraph(f"Rs. {it.unit_price:,.2f}", cell_style),
+                    Paragraph(f"Rs. {it.discount_amount:,.2f}" if it.discount_amount > 0 else "-", cell_style),
+                    Paragraph(f"Rs. {it.tax_amount:,.2f}" if it.tax_amount > 0 else "-", cell_style),
+                    Paragraph(f"Rs. {it.total:,.2f}", cell_bold),
                 ]
             )
 
@@ -249,14 +335,14 @@ class BillingPDFService:
         # 4. Financial Totals Table (right-aligned)
         status_color = paid_green if invoice.balance_due <= 0.0 else unpaid_amber
         totals_data = [
-            [Paragraph("Subtotal:", cell_bold), Paragraph(f"₹{invoice.subtotal:,.2f}", cell_style)],
-            [Paragraph("Discount:", cell_style), Paragraph(f"- ₹{invoice.discount_amount:,.2f}", cell_style)],
-            [Paragraph(f"Tax / GST ({invoice.tax_rate}%):", cell_style), Paragraph(f"+ ₹{invoice.tax_amount:,.2f}", cell_style)],
-            [Paragraph("<b>Grand Total:</b>", cell_bold), Paragraph(f"<b>₹{invoice.grand_total:,.2f}</b>", cell_bold)],
-            [Paragraph("Amount Paid:", cell_style), Paragraph(f"₹{invoice.amount_paid:,.2f}", cell_style)],
+            [Paragraph("Subtotal:", cell_bold), Paragraph(f"Rs. {invoice.subtotal:,.2f}", cell_style)],
+            [Paragraph("Discount:", cell_style), Paragraph(f"- Rs. {invoice.discount_amount:,.2f}", cell_style)],
+            [Paragraph(f"Tax / GST ({invoice.tax_rate}%):", cell_style), Paragraph(f"+ Rs. {invoice.tax_amount:,.2f}", cell_style)],
+            [Paragraph("<b>Grand Total:</b>", cell_bold), Paragraph(f"<b>Rs. {invoice.grand_total:,.2f}</b>", cell_bold)],
+            [Paragraph("Amount Paid:", cell_style), Paragraph(f"Rs. {invoice.amount_paid:,.2f}", cell_style)],
             [
                 Paragraph("<b>Balance Due:</b>", ParagraphStyle("BalLabel", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=9, textColor=status_color)),
-                Paragraph(f"<b>₹{invoice.balance_due:,.2f}</b>", ParagraphStyle("BalVal", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=9, textColor=status_color)),
+                Paragraph(f"<b>Rs. {invoice.balance_due:,.2f}</b>", ParagraphStyle("BalVal", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=9, textColor=status_color)),
             ],
         ]
         totals_table = Table(totals_data, colWidths=[120, 90], hAlign="RIGHT")
@@ -298,9 +384,20 @@ class BillingPDFService:
             sig_img = ClinicianSignatureService.create_signature_flowable(signature_data, width=100, height=30)
             if sig_img:
                 auth_sig_cell.append(sig_img)
-        auth_sig_cell.append(
-            Paragraph("<b>Authorized Signatory</b><br/>_______________________", ParagraphStyle("Sig", parent=styles["Normal"], alignment=2, fontName="Helvetica", fontSize=8.5))
-        )
+            auth_sig_cell.append(
+                Paragraph("<b>Authorized Signatory</b><br/>_______________________", ParagraphStyle("Sig", parent=styles["Normal"], alignment=2, fontName="Helvetica", fontSize=8.5))
+            )
+        else:
+            invoice_date_str = invoice.date.strftime("%d-%b-%Y") if invoice.date else datetime.now(UTC).strftime("%d-%b-%Y")
+            seal = BillingPDFService.get_official_seal_flowable(
+                payment_date=invoice_date_str,
+                clinic_name=clinic_name,
+                title="TAX INVOICE",
+                status_text=f"STATUS: {invoice.status.upper()}",
+                signatory_label="Authorized Doctor",
+                primary_color=primary_color,
+            )
+            auth_sig_cell.append(seal)
 
         sig_data = [
             [
@@ -314,7 +411,10 @@ class BillingPDFService:
             ]
         ]
         sig_table = Table(sig_data, colWidths=[60, 260, 203])
-        sig_table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "BOTTOM")]))
+        sig_table.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (2, 0), (2, 0), "RIGHT"),
+        ]))
         story.append(sig_table)
 
         doc.build(story)
@@ -415,25 +515,62 @@ class BillingPDFService:
         receipt_meta = (
             f"<b>Receipt #:</b> {payment.receipt_number}<br/>"
             f"<b>Date:</b> {payment.payment_date.strftime('%d-%b-%Y')}<br/>"
-            f"<b>Status:</b> {payment.status}"
+            f"<b>Status:</b> <font color='#059669'><b>{payment.status.upper()}</b></font>"
         )
 
-        header_table = Table(
-            [
+        logo_flowable = BillingPDFService.get_clinic_logo_flowable(width=44, height=44)
+        header_left = [
+            Paragraph(f"<b>{clinic_name}</b>", clinic_name_style),
+            Spacer(1, 2),
+            Paragraph(f"Address: City Centre, Opp. General Hospital<br/>{clinic_info}", clinic_meta_style),
+        ]
+
+        if logo_flowable:
+            header_table = Table(
                 [
-                    Paragraph(f"<b>{clinic_name}</b>", clinic_name_style),
-                    Paragraph("OFFICIAL PAYMENT RECEIPT", doc_title_style),
+                    [
+                        logo_flowable,
+                        header_left,
+                        Paragraph("OFFICIAL PAYMENT RECEIPT", doc_title_style),
+                    ],
+                    [
+                        "",
+                        "",
+                        Paragraph(receipt_meta, meta_style),
+                    ],
                 ],
+                colWidths=[52, 258, 213],
+            )
+            header_table.setStyle(
+                TableStyle([
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("SPAN", (0, 0), (0, 1)),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ])
+            )
+        else:
+            header_table = Table(
                 [
-                    Paragraph(clinic_info, clinic_meta_style),
-                    Paragraph(receipt_meta, meta_style),
+                    [
+                        header_left,
+                        Paragraph("OFFICIAL PAYMENT RECEIPT", doc_title_style),
+                    ],
+                    [
+                        "",
+                        Paragraph(receipt_meta, meta_style),
+                    ],
                 ],
-            ],
-            colWidths=[300, 223],
-        )
-        header_table.setStyle(
-            TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)])
-        )
+                colWidths=[310, 213],
+            )
+            header_table.setStyle(
+                TableStyle([
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ])
+            )
+
         story.append(header_table)
         story.append(Spacer(1, 10))
         story.append(HRFlowable(width="100%", thickness=1.5, color=primary_color, spaceAfter=14))
@@ -441,62 +578,90 @@ class BillingPDFService:
         # 2. Large Amount Received Callout Box
         callout_data = [
             [Paragraph("AMOUNT RECEIVED", ParagraphStyle("Label", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=9, textColor=muted_color, alignment=1))],
-            [Paragraph(f"₹{payment.amount:,.2f}", amount_callout)],
-            [Paragraph(f"Payment Method: <b>{payment.method}</b>" + (f" | Ref: <b>{payment.transaction_reference}</b>" if payment.transaction_reference else ""), ParagraphStyle("Sub", parent=styles["Normal"], fontName="Helvetica", fontSize=8.5, textColor=slate_color, alignment=1))],
+            [Paragraph(f"Rs. {payment.amount:,.2f}", amount_callout)],
+            [Paragraph(f"Payment Method: <b>{payment.method}</b>" + (f" | Reference / UTR: <b>{payment.transaction_reference}</b>" if payment.transaction_reference else ""), ParagraphStyle("Sub", parent=styles["Normal"], fontName="Helvetica", fontSize=8.5, textColor=slate_color, alignment=1))],
         ]
         callout_table = Table(callout_data, colWidths=[523])
         callout_table.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ecfdf5")),
-                    ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#a7f3d0")),
-                    ("TOPPADDING", (0, 0), (-1, -1), 6),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#6ee7b7")),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                 ]
             )
         )
         story.append(callout_table)
-        story.append(Spacer(1, 16))
+        story.append(Spacer(1, 14))
 
         # 3. Transaction Details
+        bal_text = "Rs. 0.00 (Fully Settled)" if payment.remaining_balance <= 0.0 else f"Rs. {payment.remaining_balance:,.2f}"
+        bal_color = "#059669" if payment.remaining_balance <= 0.0 else "#d97706"
         details_data = [
-            [Paragraph("Received From:", cell_bold), Paragraph(f"{payment.patient_name or 'Patient'} (ID: {payment.patient_number or 'N/A'})", cell_style)],
-            [Paragraph("Invoice Number:", cell_bold), Paragraph(payment.invoice_number or "N/A", cell_style)],
+            [Paragraph("Received From (Patient):", cell_bold), Paragraph(f"<b>{payment.patient_name or 'Patient'}</b> (Patient ID: {payment.patient_number or 'N/A'})", cell_style)],
+            [Paragraph("Invoice Number:", cell_bold), Paragraph(f"<b>{payment.invoice_number or 'N/A'}</b>", cell_style)],
             [Paragraph("Payment Date:", cell_bold), Paragraph(payment.payment_date.strftime("%d-%b-%Y"), cell_style)],
-            [Paragraph("Payment Method:", cell_bold), Paragraph(str(payment.method), cell_style)],
-            [Paragraph("Transaction Reference:", cell_bold), Paragraph(payment.transaction_reference or "N/A", cell_style)],
-            [Paragraph("Received By:", cell_bold), Paragraph(payment.receiver_name or "Front Desk Cashier", cell_style)],
-            [Paragraph("Remaining Balance Due:", cell_bold), Paragraph(f"<b>₹{payment.remaining_balance:,.2f}</b>", cell_bold)],
+            [Paragraph("Payment Mode:", cell_bold), Paragraph(str(payment.method), cell_style)],
+            [Paragraph("Transaction Reference / UTR:", cell_bold), Paragraph(payment.transaction_reference or "N/A", cell_style)],
+            [Paragraph("Received / Handled By:", cell_bold), Paragraph(payment.receiver_name or "Front Desk Cashier", cell_style)],
+            [Paragraph("Remaining Balance Due:", cell_bold), Paragraph(f"<font color='{bal_color}'><b>{bal_text}</b></font>", cell_bold)],
         ]
         if payment.notes:
-            details_data.append([Paragraph("Notes:", cell_bold), Paragraph(payment.notes, cell_style)])
+            details_data.append([Paragraph("Payment Notes:", cell_bold), Paragraph(payment.notes, cell_style)])
 
-        details_table = Table(details_data, colWidths=[160, 363])
+        details_table = Table(details_data, colWidths=[170, 353])
         details_table.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
                     ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
                     ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                 ]
             )
         )
         story.append(details_table)
-        story.append(Spacer(1, 24))
+        story.append(Spacer(1, 20))
 
-        # 4. Sign-off block
-        sig_data = [
+        # 4. Sign-off, QR Verification & Official Seal block
+        qr_flow = QRCodeService.generate_qr_flowable(
+            f"DENTALCARE-RECEIPT|{payment.receipt_number}|{payment.amount}|{payment.payment_date}|{clinic_name}",
+            size=55,
+        )
+
+        seal_table = BillingPDFService.get_official_seal_flowable(
+            payment_date=payment.payment_date.strftime("%d-%b-%Y"),
+            clinic_name=clinic_name,
+            title="OFFICIAL RECEIPT",
+            status_text="PAID & VERIFIED",
+            signatory_label="Cashier Sign",
+            primary_color=primary_color,
+        )
+
+        sig_table = Table(
             [
-                Paragraph("This is a computer-generated receipt issued by DentalCare Pro.", cell_style),
-                Paragraph("<b>Cashier / Clinic Seal</b><br/><br/>_______________________", ParagraphStyle("Sig", parent=styles["Normal"], alignment=2, fontName="Helvetica", fontSize=8.5)),
-            ]
-        ]
-        sig_table = Table(sig_data, colWidths=[320, 203])
-        sig_table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "BOTTOM")]))
+                [
+                    qr_flow,
+                    Paragraph(
+                        "This is an official tamper-evident computer-generated payment receipt issued by DentalCare Pro Clinic.<br/>"
+                        "<font size='7' color='#94a3b8'>Scan QR code to verify authenticity • Valid for tax and medical insurance claim reimbursement.</font>",
+                        cell_style,
+                    ),
+                    seal_table,
+                ]
+            ],
+            colWidths=[65, 270, 188],
+        )
+        sig_table.setStyle(
+            TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (2, 0), (2, 0), "RIGHT"),
+            ])
+        )
         story.append(sig_table)
 
         doc.build(story)
@@ -556,7 +721,7 @@ class BillingPDFService:
         story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#94a3b8"), spaceAfter=4))
 
         story.append(Paragraph("AMOUNT PAID", sub_style))
-        story.append(Paragraph(f"₹{payment.amount:,.2f}", center_bold))
+        story.append(Paragraph(f"Rs. {payment.amount:,.2f}", center_bold))
         story.append(Spacer(1, 4))
         story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#94a3b8"), spaceAfter=4))
 

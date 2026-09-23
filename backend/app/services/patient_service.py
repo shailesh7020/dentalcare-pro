@@ -1,14 +1,17 @@
 import json
 import re
 import urllib.parse
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
+import jwt
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from app.core.config import get_settings
 
 from app.models import (
     AuditEvent,
@@ -35,6 +38,7 @@ from app.schemas.patient_report import (
     PatientReportShareRequest,
 )
 from app.services.notifications.providers.email import EmailNotificationProvider
+from app.services.notifications.providers.whatsapp import WhatsAppNotificationProvider
 from app.services.patient_report_pdf_service import PatientReportPDFService
 
 
@@ -304,14 +308,13 @@ class PatientService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found"
             )
 
-        # 2. Fetch Clinic
         clinic = await self.db.get(Clinic, self.clinic_id)
         clinic_info = {
             "id": str(self.clinic_id),
-            "name": clinic.name if clinic else "DentalCare Pro Clinic",
-            "phone": clinic.phone if clinic else "+91 99000 11223",
-            "email": clinic.email if clinic else "contact@dentalcarepro.in",
-            "address": clinic.address if clinic else "101 Medical Center, Dental Tower",
+            "name": (clinic.name if clinic and clinic.name else "DentalCare Pro Clinic"),
+            "phone": (clinic.phone if clinic and clinic.phone else "+91 99000 11223"),
+            "email": (clinic.email if clinic and clinic.email else "contact@dentalcarepro.in"),
+            "address": (clinic.address if clinic and clinic.address else "101 Medical Center, Dental Tower"),
         }
 
         # 3. Clinician Signature
@@ -731,12 +734,12 @@ class PatientService:
         ]
 
         # 11. Format File Name & Report Number
-        clean_name = re.sub(
-            r"[^a-zA-Z0-9]", "", f"{patient.first_name}{patient.last_name}"
-        )
+        clean_first = re.sub(r"[^a-zA-Z0-9]", "", str(patient.first_name or "Patient")).upper()
+        clean_last = re.sub(r"[^a-zA-Z0-9]", "", str(patient.last_name or "")).upper()
+        patient_slug = f"{clean_first}_{clean_last}".strip("_") if clean_last else clean_first
         clean_id = re.sub(r"[^a-zA-Z0-9]", "", str(patient.patient_number))
         timestamp_day = datetime.now(UTC).strftime("%Y%m%d")
-        file_name = f"{clean_name}_{clean_id}_{timestamp_day}.pdf"
+        file_name = f"{patient_slug}_Dental_Report.pdf"
         report_number = f"REP-{timestamp_day}-{clean_id[-4:] if len(clean_id) >= 4 else '0001'}"
 
         # 12. Generate PDF Bytes
@@ -801,7 +804,22 @@ class PatientService:
         )
         await self.db.commit()
 
-        # 15. Format WhatsApp Message
+        # 15. Format WhatsApp Message & Secure Download Token
+        settings = get_settings()
+        share_token = jwt.encode(
+            {
+                "sub": str(self.actor.id),
+                "patient_id": str(patient.id),
+                "exp": datetime.now(UTC) + timedelta(days=7),
+            },
+            settings.jwt_secret.get_secret_value(),
+            algorithm=settings.jwt_algorithm,
+        )
+        download_path = (
+            f"/api/v1/patients/{patient.id}/reports/download"
+            f"?report_number={report_number}&token={share_token}"
+        )
+
         section_titles = {
             PatientReportSectionEnum.MEDICAL_HISTORY: "Medical History",
             PatientReportSectionEnum.TREATMENT_HISTORY: "Treatment Summary",
@@ -847,7 +865,7 @@ class PatientService:
             report_number=report_number,
             file_name=file_name,
             document_id=doc_id,
-            download_url=f"/api/v1/patients/{patient.id}/reports/download?report_number={report_number}",
+            download_url=download_path,
             generated_at=datetime.now(UTC),
             patient_id=patient.id,
             patient_name=f"{patient.first_name} {patient.last_name}",
@@ -866,7 +884,58 @@ class PatientService:
     ) -> dict[str, Any]:
         patient = await self.get(patient_id)
         clinic = await self.db.get(Clinic, self.clinic_id)
-        clinic_name = clinic.name if clinic else "DentalCare Pro Clinic"
+        clinic_name = (clinic.name if clinic and clinic.name else "DentalCare Pro Clinic")
+
+        clean_first = re.sub(r"[^a-zA-Z0-9]", "", str(patient.first_name or "Patient")).upper()
+        clean_last = re.sub(r"[^a-zA-Z0-9]", "", str(patient.last_name or "")).upper()
+        patient_slug = f"{clean_first}_{clean_last}".strip("_") if clean_last else clean_first
+        file_name = f"{patient_slug}_Dental_Report.pdf"
+
+        # Direct WhatsApp PDF Document Dispatch
+        if payload.delivery_method.upper() == "WHATSAPP":
+            pdf_bytes: bytes | None = None
+            if payload.report_id:
+                try:
+                    doc = await self.get_document(patient_id, payload.report_id)
+                    file_path = get_settings().storage_local_path / doc.storage_key
+                    if file_path.exists() and file_path.is_file():
+                        pdf_bytes = file_path.read_bytes()
+                        file_name = doc.file_name or file_name
+                except Exception:
+                    pdf_bytes = None
+
+            if not pdf_bytes:
+                pdf_bytes, meta = await self.generate_patient_report(
+                    patient_id=patient_id,
+                    payload=PatientReportGenerateRequest(save_to_documents=False),
+                    storage_service=None,
+                )
+                file_name = meta.file_name
+
+            caption = (
+                f"Hello {patient.first_name} {patient.last_name},\n\n"
+                f"Please find your DentalCare Pro treatment summary attached.\n\n"
+                f"Included:\n"
+                f"• Medical History\n"
+                f"• Treatment Summary\n"
+                f"• Odontogram\n"
+                f"• Clinical Notes\n"
+                f"• Prescription\n"
+                f"• Payment Receipt\n"
+                f"• Invoice Summary\n"
+                f"• Next Appointment\n\n"
+                f"If you have any questions please contact the clinic.\n\n"
+                f"Thank you,\n{clinic_name}"
+            )
+
+            wa_res = await WhatsAppNotificationProvider.send_document(
+                recipient=payload.recipient,
+                filename=file_name,
+                caption=caption,
+                pdf_bytes=pdf_bytes,
+            )
+            if not wa_res.get("success"):
+                return wa_res
 
         # Record Audit
         self.db.add(
@@ -894,7 +963,7 @@ class PatientService:
             patient,
             "PATIENT_REPORT_SHARED",
             f"Patient report shared via {payload.delivery_method}",
-            f"Recipient: {payload.recipient}",
+            f"Recipient: {payload.recipient} | File: {file_name}",
         )
         await self.db.commit()
 
@@ -906,7 +975,7 @@ class PatientService:
                 title="Your Dental Treatment Report",
                 message=(
                     f"Dear {patient.first_name} {patient.last_name},\n\n"
-                    f"Please find your dental treatment report attached.\n\n"
+                    f"Please find your dental treatment report ({file_name}) attached.\n\n"
                     f"Best regards,\n{clinic_name}"
                 ),
             )
@@ -915,7 +984,8 @@ class PatientService:
             "success": True,
             "delivery_method": payload.delivery_method,
             "recipient": payload.recipient,
-            "message": f"Report successfully dispatched via {payload.delivery_method}",
+            "filename": file_name,
+            "message": f"Directly sent PDF '{file_name}' to {payload.recipient} via {payload.delivery_method}!",
         }
 
 

@@ -44,8 +44,6 @@ export function AppointmentDetailDialog({
   const [rescheduleReason, setRescheduleReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  if (!appointment) return null;
-
   const invalidateAll = () => {
     void queryClient.invalidateQueries({ queryKey: ["appointments"] });
     void queryClient.invalidateQueries({ queryKey: ["calendar-day"] });
@@ -53,14 +51,16 @@ export function AppointmentDetailDialog({
     void queryClient.invalidateQueries({ queryKey: ["calendar-month"] });
     void queryClient.invalidateQueries({ queryKey: ["appointment-queue"] });
     void queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-    void queryClient.invalidateQueries({ queryKey: ["patient-timeline", appointment.patient_id] });
+    if (appointment?.patient_id) {
+      void queryClient.invalidateQueries({ queryKey: ["patient-timeline", appointment.patient_id] });
+    }
     if (onUpdated) onUpdated();
   };
 
   const statusMutation = useMutation({
     mutationFn: async (endpoint: string) => {
       setActionError(null);
-      const res = await api.post(`/appointments/${appointment.id}/${endpoint}`);
+      const res = await api.post(`/appointments/${appointment?.id}/${endpoint}`);
       return res.data;
     },
     onSuccess: () => {
@@ -76,7 +76,7 @@ export function AppointmentDetailDialog({
     mutationFn: async () => {
       setActionError(null);
       if (!cancelReason.trim()) throw new Error("Please provide a reason for cancellation.");
-      const res = await api.post(`/appointments/${appointment.id}/cancel`, {
+      const res = await api.post(`/appointments/${appointment?.id}/cancel`, {
         reason: cancelReason.trim(),
       });
       return res.data;
@@ -97,7 +97,7 @@ export function AppointmentDetailDialog({
       setActionError(null);
       if (!newDate || !newTime) throw new Error("Please select new date and time.");
       if (!rescheduleReason.trim()) throw new Error("Please provide a reason for rescheduling.");
-      const res = await api.post(`/appointments/${appointment.id}/reschedule`, {
+      const res = await api.post(`/appointments/${appointment?.id}/reschedule`, {
         new_date: newDate,
         new_start_time: newTime.length === 5 ? `${newTime}:00` : newTime,
         reason: rescheduleReason.trim(),
@@ -116,6 +116,8 @@ export function AppointmentDetailDialog({
       setActionError(err.response?.data?.detail || err.message || "Failed to reschedule appointment.");
     },
   });
+
+  if (!appointment) return null;
 
   const isCompleted = appointment.status === "COMPLETED";
   const isCancelled = appointment.status === "CANCELLED";

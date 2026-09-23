@@ -336,7 +336,11 @@ export default function NewPatientPage() {
             <AlertCircle size={18} className="text-rose-600 shrink-0" />
             <div>
               <p className="font-semibold">Unable to register patient</p>
-              <p>Please check the fields marked in red and verify contact uniqueness.</p>
+              <p>
+                {(mutation.error as any)?.response?.data?.message ||
+                  (mutation.error as any)?.message ||
+                  "Please check the fields marked in red and verify contact uniqueness."}
+              </p>
             </div>
           </div>
         )}

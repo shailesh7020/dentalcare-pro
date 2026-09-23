@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
@@ -81,18 +82,203 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Authentication failed: ${e.toString()}'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        final savedRole = await widget.secureStorage.getUserRole();
+        if (savedRole != null) {
+          _showOfflineOptionDialog(savedRole, e.toString());
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Cannot reach clinic server: ${e.toString()}'),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'Configure',
+                textColor: Colors.white,
+                onPressed: _showServerConfigDialog,
+              ),
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _showOfflineOptionDialog(String savedRole, String errorMsg) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, color: Colors.amber),
+            SizedBox(width: 8),
+            Text('Offline Mode Available', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'The clinic server is unreachable from this network. You can continue using cached patient records and appointments.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            Text('Saved profile: $savedRole', style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showServerConfigDialog();
+            },
+            child: const Text('Change Server URL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _navigateToRoleHome(savedRole);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white),
+            child: const Text('Open in Offline Mode'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showServerConfigDialog() async {
+    final currentUrl = widget.apiClient.baseUrl;
+    final ctrl = TextEditingController(text: currentUrl);
+    String? testResult;
+    bool isTesting = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.dns_outlined, color: Color(0xFF0D9488)),
+                SizedBox(width: 8),
+                Text('Server Connection', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Configure the API endpoint URL for on-premise clinic LAN, Cloudflare Tunnel, or remote access.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: ctrl,
+                    decoration: InputDecoration(
+                      labelText: 'API Base URL',
+                      hintText: 'https://api.yourclinic.com/api/v1',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      isDense: true,
+                    ),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      ActionChip(
+                        label: const Text('Local LAN', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setDialogState(() => ctrl.text = 'https://api.dentalcarepro.local/api/v1'),
+                      ),
+                      ActionChip(
+                        label: const Text('Local IP:8000', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setDialogState(() => ctrl.text = 'http://192.168.1.100:8000/api/v1'),
+                      ),
+                      ActionChip(
+                        label: const Text('Remote Tunnel', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setDialogState(() => ctrl.text = 'https://clinic.dentalcarepro.com/api/v1'),
+                      ),
+                    ],
+                  ),
+                  if (testResult != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: testResult!.startsWith('OK') ? Colors.green.shade50 : Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: testResult!.startsWith('OK') ? Colors.green.shade200 : Colors.red.shade200),
+                      ),
+                      child: Text(
+                        testResult!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: testResult!.startsWith('OK') ? Colors.green.shade800 : Colors.red.shade800,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isTesting
+                    ? null
+                    : () async {
+                        setDialogState(() {
+                          isTesting = true;
+                          testResult = null;
+                        });
+                        try {
+                          final testDio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 5)));
+                          final target = ctrl.text.trim();
+                          final pingUrl = target.endsWith('/api/v1') ? target.replaceAll('/api/v1', '/api/v1/health') : '$target/health';
+                          final res = await testDio.get(pingUrl);
+                          setDialogState(() {
+                            isTesting = false;
+                            testResult = 'OK (${res.statusCode}): Server is reachable!';
+                          });
+                        } catch (err) {
+                          setDialogState(() {
+                            isTesting = false;
+                            testResult = 'Unreachable: ${err.toString().split("\n").first}';
+                          });
+                        }
+                      },
+                child: isTesting
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Test Connection'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final newUrl = ctrl.text.trim();
+                  if (newUrl.isNotEmpty) {
+                    await widget.secureStorage.setServerUrl(newUrl);
+                    widget.apiClient.setBaseUrl(newUrl);
+                    if (mounted) setState(() {});
+                  }
+                  Navigator.pop(dialogCtx);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white),
+                child: const Text('Save & Apply'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _handleBiometricLogin() async {
@@ -145,7 +331,44 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
+              // Top Server Connection Status Bar
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: _showServerConfigDialog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            size: 8,
+                            color: widget.apiClient.baseUrl.contains('.local') ? Colors.amber.shade700 : const Color(0xFF0D9488),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            widget.apiClient.baseUrl.replaceAll('https://', '').replaceAll('http://', '').replaceAll('/api/v1', ''),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined, color: Colors.grey, size: 20),
+                    tooltip: 'Server Connection Settings',
+                    onPressed: _showServerConfigDialog,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               Center(
                 child: Container(
                   width: 72,

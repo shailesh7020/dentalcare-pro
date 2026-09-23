@@ -175,6 +175,38 @@ export function PatientReportModal({
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState<boolean>(false);
+  const [waLinkPrompt, setWaLinkPrompt] = useState<{
+    qr_data_url: string | null;
+    status: string;
+  } | null>(null);
+  const [pairingPhone, setPairingPhone] = useState<string>("");
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [isRequestingPairing, setIsRequestingPairing] = useState<boolean>(false);
+
+  // Poll WhatsApp Gateway when QR linking is active, and auto-send PDF as soon as connected!
+  useEffect(() => {
+    if (!waLinkPrompt || !isOpen) return;
+    const timer = setInterval(async () => {
+      try {
+        const res = await api.get("/patients/whatsapp/status");
+        const st = res.data;
+        if (st?.connected) {
+          setWaLinkPrompt(null);
+          setPairingCode(null);
+          void handleShareWhatsApp();
+        } else if (st?.qr_data_url) {
+          setWaLinkPrompt({
+            qr_data_url: st.qr_data_url,
+            status: st.status || "QR_READY",
+          });
+        }
+      } catch {
+        // ignore poll error
+      }
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [waLinkPrompt, isOpen]);
 
   // Close on Escape key
   useEffect(() => {
@@ -227,6 +259,17 @@ export function PatientReportModal({
       setGeneratedMeta(res.data);
       if (onReportSaved) {
         onReportSaved();
+      }
+      try {
+        const waSt = await api.get("/patients/whatsapp/status");
+        if (waSt.data && !waSt.data.connected) {
+          setWaLinkPrompt({
+            qr_data_url: waSt.data.qr_data_url || null,
+            status: waSt.data.status || "QR_READY",
+          });
+        }
+      } catch {
+        // ignore status check error
       }
     } catch (err: any) {
       console.error("Failed to generate report:", err);
@@ -296,7 +339,26 @@ export function PatientReportModal({
     }
   };
 
-  // Share via WhatsApp
+  const handleRequestPairingCode = async () => {
+    if (!pairingPhone.trim()) return;
+    try {
+      setIsRequestingPairing(true);
+      const res = await api.post("/patients/whatsapp/pairing-code", {
+        phone: pairingPhone.trim(),
+      });
+      if (res.data?.pairing_code) {
+        setPairingCode(res.data.pairing_code);
+      } else {
+        setShareError(res.data?.message || "Could not generate pairing code.");
+      }
+    } catch (err: any) {
+      setShareError(err.response?.data?.message || "Failed to request pairing code.");
+    } finally {
+      setIsRequestingPairing(false);
+    }
+  };
+
+  // Directly Send PDF to Patient's WhatsApp Number (No links, no drag-and-drop)
   const handleShareWhatsApp = async () => {
     setShareFeedback(null);
     setShareError(null);
@@ -310,26 +372,38 @@ export function PatientReportModal({
     }
 
     try {
-      // Record share audit
-      await api.post(`/patients/${patient.id}/reports/share`, {
+      setIsSendingWhatsApp(true);
+      const res = await api.post(`/patients/${patient.id}/reports/share`, {
         delivery_method: "WHATSAPP",
         recipient: phone,
         report_id: generatedMeta?.document_id,
       });
 
-      // Open WhatsApp Web/Mobile
-      if (generatedMeta?.whatsapp_url) {
-        window.open(generatedMeta.whatsapp_url, "_blank");
+      const data = res.data;
+      if (data?.success) {
+        setWaLinkPrompt(null);
+        setShareFeedback(
+          `Directly sent PDF "${generatedMeta?.file_name}" to ${patient.first_name} (${phone}) on WhatsApp!`
+        );
+      } else if (data?.code === "WHATSAPP_NOT_LINKED") {
+        setWaLinkPrompt({
+          qr_data_url: data.qr_data_url || null,
+          status: data.status || "QR_READY",
+        });
+      } else {
+        setShareError(
+          data?.message || "Could not send PDF via WhatsApp. Please verify connection."
+        );
       }
-
-      setShareFeedback(
-        `WhatsApp opened for ${patient.first_name}! Notice: Remember to attach the saved report PDF (${generatedMeta?.file_name}) directly from the patient's Documents section.`
+    } catch (err: any) {
+      console.error("WhatsApp direct PDF send error:", err);
+      setShareError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Failed to send PDF via WhatsApp."
       );
-    } catch (err) {
-      console.error("WhatsApp share audit error:", err);
-      if (generatedMeta?.whatsapp_url) {
-        window.open(generatedMeta.whatsapp_url, "_blank");
-      }
+    } finally {
+      setIsSendingWhatsApp(false);
     }
   };
 
@@ -584,7 +658,7 @@ export function PatientReportModal({
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 space-y-3">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Share2 className="w-4 h-4 text-teal-600" />
-                  Instant Direct Sharing with Patient:
+                  Instant Direct PDF Delivery to Patient:
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -592,10 +666,13 @@ export function PatientReportModal({
                   <button
                     type="button"
                     onClick={handleShareWhatsApp}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
+                    disabled={isSendingWhatsApp}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <MessageSquare className="w-4 h-4" />
-                    Share on WhatsApp
+                    {isSendingWhatsApp
+                      ? `Sending ${generatedMeta?.file_name}...`
+                      : "Send PDF on WhatsApp"}
                   </button>
 
                   {/* Email Button */}
@@ -603,12 +680,75 @@ export function PatientReportModal({
                     type="button"
                     onClick={handleShareEmail}
                     disabled={isSendingEmail}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <Mail className="w-4 h-4" />
                     {isSendingEmail ? "Sending Email..." : "Send via Email"}
                   </button>
                 </div>
+
+                {/* One-Time Clinic WhatsApp Link Prompt (if not linked yet) */}
+                {waLinkPrompt && (
+                  <div className="mt-3 p-4 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 space-y-3 shadow-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h5 className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                          One-Time Setup: Link Clinic WhatsApp for Direct PDF Sending
+                        </h5>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                          Scan this QR code once from your clinic phone (<b>WhatsApp &rarr; Linked Devices &rarr; Link a Device</b>). As soon as connected, <b>{generatedMeta?.file_name}</b> will be sent directly to <b>{patient.mobile_number}</b> automatically!
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-4 pt-1">
+                      {waLinkPrompt.qr_data_url ? (
+                        <img
+                          src={waLinkPrompt.qr_data_url}
+                          alt="Clinic WhatsApp Link QR"
+                          className="w-44 h-44 rounded-lg border border-slate-200 p-1 bg-white shrink-0"
+                        />
+                      ) : (
+                        <div className="w-44 h-44 rounded-lg border border-slate-200 flex items-center justify-center text-xs text-slate-400 bg-slate-50 shrink-0">
+                          Generating QR Code...
+                        </div>
+                      )}
+
+                      <div className="flex-1 space-y-2.5 w-full">
+                        <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                          Or Link Using Clinic Phone Number (Pairing Code):
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={pairingPhone}
+                            onChange={(e) => setPairingPhone(e.target.value)}
+                            placeholder="e.g. 919876543210"
+                            className="flex-1 px-2.5 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleRequestPairingCode}
+                            disabled={isRequestingPairing}
+                            className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-md hover:bg-slate-800 disabled:opacity-50"
+                          >
+                            {isRequestingPairing ? "..." : "Get Code"}
+                          </button>
+                        </div>
+                        {pairingCode && (
+                          <div className="p-2 rounded-md bg-emerald-50 border border-emerald-200 text-center">
+                            <span className="text-[10px] uppercase text-emerald-700 block font-semibold">
+                              Enter this code on your phone:
+                            </span>
+                            <span className="text-base font-mono font-bold tracking-widest text-emerald-900">
+                              {pairingCode}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
                   <p>

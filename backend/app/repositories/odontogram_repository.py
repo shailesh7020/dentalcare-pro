@@ -97,12 +97,17 @@ class OdontogramRepository:
     async def get_teeth_by_patient(
         self, clinic_id: UUID, patient_id: UUID, dentition_type: str = "ADULT"
     ) -> list[Tooth]:
+        dentition_str = (
+            dentition_type.value
+            if hasattr(dentition_type, "value")
+            else str(dentition_type)
+        ).upper()
         query = (
             select(Tooth)
             .where(
                 Tooth.clinic_id == clinic_id,
                 Tooth.patient_id == patient_id,
-                Tooth.dentition_type == dentition_type,
+                Tooth.dentition_type == dentition_str,
                 Tooth.deleted_at.is_(None),
             )
             .options(
@@ -120,93 +125,168 @@ class OdontogramRepository:
         dentition_type: str = "ADULT",
         user_id: UUID | None = None,
     ) -> list[Tooth]:
-        existing_teeth = await self.get_teeth_by_patient(clinic_id, patient_id, dentition_type)
-        if existing_teeth:
-            return existing_teeth
+        dentition_str = (
+            dentition_type.value
+            if hasattr(dentition_type, "value")
+            else str(dentition_type)
+        ).upper()
 
-        # Initialize Catalog
         catalog = (
             ADULT_TEETH_CATALOG
-            if dentition_type == DentitionType.ADULT
+            if dentition_str == DentitionType.ADULT.value
             else PRIMARY_TEETH_CATALOG
         )
 
-        created_teeth: list[Tooth] = []
-        for entry in catalog:
-            tooth = Tooth(
-                id=uuid4(),
-                clinic_id=clinic_id,
-                patient_id=patient_id,
-                tooth_number=entry["number"],
-                universal_number=entry["universal"],
-                palmer_notation=entry["palmer"],
-                name=entry["name"],
-                dentition_type=dentition_type,
-                arch=entry["arch"].value if hasattr(entry["arch"], "value") else str(entry["arch"]),
-                quadrant=entry["quadrant"],
-                tooth_type=entry["type"].value if hasattr(entry["type"], "value") else str(entry["type"]),
-                primary_status=ToothCondition.HEALTHY.value,
-                color=COLOR_STANDARDS[ToothCondition.HEALTHY],
-                is_missing=False,
-                is_extracted=False,
-                is_impacted=False,
-                has_root_canal=False,
-                has_crown=False,
-                has_implant=False,
-                has_bridge=False,
-                mobility_grade=0,
-                created_by=user_id,
-                updated_by=user_id,
-            )
+        catalog_map = {entry["number"]: entry for entry in catalog}
+        existing_teeth = await self.get_teeth_by_patient(clinic_id, patient_id, dentition_str)
+        existing_by_num = {t.tooth_number: t for t in existing_teeth}
 
-            # Surfaces: MESIAL, DISTAL, BUCCAL, LINGUAL, [OCCLUSAL or INCISAL], CERVICAL, ROOT
-            surfaces_to_create = [
-                ToothSurfaceEnum.MESIAL,
-                ToothSurfaceEnum.DISTAL,
-                ToothSurfaceEnum.BUCCAL,
-                ToothSurfaceEnum.LINGUAL,
-                entry["center"],
-                ToothSurfaceEnum.CERVICAL,
-                ToothSurfaceEnum.ROOT,
-            ]
+        modified = False
 
-            for s in surfaces_to_create:
-                surf_name = s.value if hasattr(s, "value") else str(s)
-                surf = ToothSurface(
-                    id=uuid4(),
-                    clinic_id=clinic_id,
-                    tooth_id=tooth.id,
-                    surface=surf_name,
-                    condition=ToothCondition.HEALTHY.value,
-                    treatment="NONE",
-                    color=COLOR_STANDARDS[ToothCondition.HEALTHY],
-                    last_modified_at=datetime.now(UTC),
-                    created_by=user_id,
-                    updated_by=user_id,
-                )
-                tooth.surfaces.append(surf)
+        # 1. Normalize and repair any existing teeth
+        for t_num, tooth in existing_by_num.items():
+            if t_num in catalog_map:
+                entry = catalog_map[t_num]
+                c_arch = entry["arch"].value if hasattr(entry["arch"], "value") else str(entry["arch"])
+                c_quad = entry["quadrant"]
+                c_type = entry["type"].value if hasattr(entry["type"], "value") else str(entry["type"])
 
-            # Immutable Initial History Entry
-            tooth.history.append(
-                ToothHistory(
+                if tooth.arch != c_arch:
+                    tooth.arch = c_arch
+                    modified = True
+                if tooth.quadrant != c_quad:
+                    tooth.quadrant = c_quad
+                    modified = True
+                if tooth.tooth_type != c_type:
+                    tooth.tooth_type = c_type
+                    modified = True
+                if not tooth.universal_number or tooth.universal_number != entry["universal"]:
+                    tooth.universal_number = entry["universal"]
+                    modified = True
+                if not tooth.palmer_notation or tooth.palmer_notation != entry["palmer"]:
+                    tooth.palmer_notation = entry["palmer"]
+                    modified = True
+                if not tooth.name or tooth.name != entry["name"]:
+                    tooth.name = entry["name"]
+                    modified = True
+
+                # Check if tooth has surfaces; if not, initialize them
+                tooth_surfs = getattr(tooth, "surfaces", None)
+                if not tooth_surfs:
+                    surfaces_to_create = [
+                        ToothSurfaceEnum.MESIAL,
+                        ToothSurfaceEnum.DISTAL,
+                        ToothSurfaceEnum.BUCCAL,
+                        ToothSurfaceEnum.LINGUAL,
+                        entry["center"],
+                        ToothSurfaceEnum.CERVICAL,
+                        ToothSurfaceEnum.ROOT,
+                    ]
+                    if tooth.surfaces is None:
+                        tooth.surfaces = []
+                    for s in surfaces_to_create:
+                        surf_name = s.value if hasattr(s, "value") else str(s)
+                        surf = ToothSurface(
+                            id=uuid4(),
+                            clinic_id=clinic_id,
+                            tooth_id=tooth.id,
+                            surface=surf_name,
+                            condition=ToothCondition.HEALTHY.value,
+                            treatment="NONE",
+                            color=COLOR_STANDARDS[ToothCondition.HEALTHY],
+                            last_modified_at=datetime.now(UTC),
+                            created_by=user_id,
+                            updated_by=user_id,
+                        )
+                        tooth.surfaces.append(surf)
+                        self.db.add(surf)
+                    modified = True
+
+        # 2. Check for missing teeth from catalog and create them
+        missing_entries = [entry for entry in catalog if entry["number"] not in existing_by_num]
+        if missing_entries:
+            modified = True
+            for entry in missing_entries:
+                tooth = Tooth(
                     id=uuid4(),
                     clinic_id=clinic_id,
                     patient_id=patient_id,
-                    tooth_id=tooth.id,
-                    action="INITIALIZED",
-                    description=f"Initialized tooth #{entry['number']} as healthy {dentition_type.lower()} dentition.",
-                    previous_state=None,
-                    new_state=json.dumps({"primary_status": ToothCondition.HEALTHY.value, "surfaces": "ALL_HEALTHY"}),
-                    created_at=datetime.now(UTC),
+                    tooth_number=entry["number"],
+                    universal_number=entry["universal"],
+                    palmer_notation=entry["palmer"],
+                    name=entry["name"],
+                    dentition_type=dentition_str,
+                    arch=entry["arch"].value if hasattr(entry["arch"], "value") else str(entry["arch"]),
+                    quadrant=entry["quadrant"],
+                    tooth_type=entry["type"].value if hasattr(entry["type"], "value") else str(entry["type"]),
+                    primary_status=ToothCondition.HEALTHY.value,
+                    color=COLOR_STANDARDS[ToothCondition.HEALTHY],
+                    is_missing=False,
+                    is_extracted=False,
+                    is_impacted=False,
+                    has_root_canal=False,
+                    has_crown=False,
+                    has_implant=False,
+                    has_bridge=False,
+                    mobility_grade=0,
                     created_by=user_id,
+                    updated_by=user_id,
                 )
-            )
 
-            self.db.add(tooth)
-            created_teeth.append(tooth)
+                surfaces_to_create = [
+                    ToothSurfaceEnum.MESIAL,
+                    ToothSurfaceEnum.DISTAL,
+                    ToothSurfaceEnum.BUCCAL,
+                    ToothSurfaceEnum.LINGUAL,
+                    entry["center"],
+                    ToothSurfaceEnum.CERVICAL,
+                    ToothSurfaceEnum.ROOT,
+                ]
 
-        await self.db.flush()
-        return created_teeth
+                for s in surfaces_to_create:
+                    surf_name = s.value if hasattr(s, "value") else str(s)
+                    surf = ToothSurface(
+                        id=uuid4(),
+                        clinic_id=clinic_id,
+                        tooth_id=tooth.id,
+                        surface=surf_name,
+                        condition=ToothCondition.HEALTHY.value,
+                        treatment="NONE",
+                        color=COLOR_STANDARDS[ToothCondition.HEALTHY],
+                        last_modified_at=datetime.now(UTC),
+                        created_by=user_id,
+                        updated_by=user_id,
+                    )
+                    tooth.surfaces.append(surf)
+
+                tooth.history.append(
+                    ToothHistory(
+                        id=uuid4(),
+                        clinic_id=clinic_id,
+                        patient_id=patient_id,
+                        tooth_id=tooth.id,
+                        action="INITIALIZED",
+                        description=f"Initialized tooth #{entry['number']} as healthy {dentition_str.lower()} dentition.",
+                        previous_state=None,
+                        new_state=json.dumps({"primary_status": ToothCondition.HEALTHY.value, "surfaces": "ALL_HEALTHY"}),
+                        created_at=datetime.now(UTC),
+                        created_by=user_id,
+                    )
+                )
+
+                self.db.add(tooth)
+                existing_by_num[entry["number"]] = tooth
+
+        if modified:
+            await self.db.flush()
+            if hasattr(self.db, "commit"):
+                await self.db.commit()
+
+        # Re-fetch or return complete sorted teeth
+        all_teeth = await self.get_teeth_by_patient(clinic_id, patient_id, dentition_str)
+        if not all_teeth:
+            all_teeth = list(existing_by_num.values())
+        return all_teeth
 
     async def get_tooth_by_id(self, clinic_id: UUID, tooth_id: UUID) -> Tooth | None:
         tooth = await self.db.get(Tooth, tooth_id)

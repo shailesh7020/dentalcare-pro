@@ -9,6 +9,7 @@ class SecureStorageService {
   static const _keyUserId = 'user_id';
   static const _keyClinicId = 'clinic_id';
   static const _keyBiometricEnabled = 'biometric_enabled';
+  static const _keyServerUrl = 'server_url';
 
   Future<void> saveTokens({
     required String accessToken,
@@ -31,6 +32,8 @@ class SecureStorageService {
   Future<String?> getUserRole() => _storage.read(key: _keyUserRole);
   Future<String?> getUserId() => _storage.read(key: _keyUserId);
   Future<String?> getClinicId() => _storage.read(key: _keyClinicId);
+  Future<String?> getServerUrl() => _storage.read(key: _keyServerUrl);
+  Future<void> setServerUrl(String url) => _storage.write(key: _keyServerUrl, value: url);
 
   Future<bool> isBiometricEnabled() async {
     final val = await _storage.read(key: _keyBiometricEnabled);

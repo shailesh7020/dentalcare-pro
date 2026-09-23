@@ -36,7 +36,7 @@ export function TabsList({
 }) {
   return (
     <div
-      className={`inline-flex items-center gap-1 border-b border-slate-200 w-full overflow-x-auto ${className}`}
+      className={`inline-flex items-center gap-1 border-b border-slate-200 dark:border-slate-800 w-full overflow-x-auto ${className}`}
     >
       {children}
     </div>
@@ -60,10 +60,10 @@ export function TabsTrigger({
     <button
       type="button"
       onClick={() => ctx.onValueChange(value)}
-      className={`px-4 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 -mb-[1px] flex items-center gap-2 ${
+      className={`px-4 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 -mb-[1px] flex items-center gap-2 cursor-pointer ${
         active
-          ? "border-teal-600 text-teal-700 font-semibold"
-          : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+          ? "border-teal-600 text-teal-700 dark:text-teal-400 font-semibold"
+          : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
       } ${className}`}
     >
       {children}

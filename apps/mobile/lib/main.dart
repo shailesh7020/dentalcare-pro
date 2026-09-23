@@ -12,8 +12,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final secureStorage = SecureStorageService();
+  final savedServerUrl = await secureStorage.getServerUrl();
   final localDb = LocalDatabase();
-  final apiClient = ApiClient(secureStorage: secureStorage);
+  final apiClient = ApiClient(secureStorage: secureStorage, initialBaseUrl: savedServerUrl);
   final syncEngine = OfflineSyncEngine(apiClient: apiClient, localDb: localDb);
   final biometricService = BiometricService();
   final pushService = PushNotificationService(apiClient: apiClient);

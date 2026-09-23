@@ -4,9 +4,11 @@ packages:
 
 allowBuilds:
   "@prisma/engines": true
+  "@whiskeysockets/baileys": true
   bcrypt: true
   esbuild: true
   msgpackr-extract: true
   prisma: true
+  protobufjs: true
   unrs-resolver: true
   workerd: true

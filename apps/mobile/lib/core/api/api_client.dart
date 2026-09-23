@@ -6,10 +6,11 @@ class ApiClient {
   late final Dio dio;
   final SecureStorageService secureStorage;
 
-  ApiClient({required this.secureStorage}) {
+  ApiClient({required this.secureStorage, String? initialBaseUrl}) {
+    final effectiveBaseUrl = initialBaseUrl ?? ApiEndpoints.baseUrl;
     dio = Dio(
       BaseOptions(
-        baseUrl: ApiEndpoints.baseUrl,
+        baseUrl: effectiveBaseUrl,
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
         headers: {
@@ -44,13 +45,20 @@ class ApiClient {
     );
   }
 
+  void setBaseUrl(String url) {
+    final cleanUrl = url.trim().endsWith('/') ? url.trim().substring(0, url.trim().length - 1) : url.trim();
+    dio.options.baseUrl = cleanUrl;
+  }
+
+  String get baseUrl => dio.options.baseUrl;
+
   Future<bool> _attemptTokenRefresh() async {
     try {
       final refreshToken = await secureStorage.getRefreshToken();
       if (refreshToken == null) return false;
 
       final response = await Dio().post(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.refresh}',
+        '${dio.options.baseUrl}${ApiEndpoints.refresh}',
         data: {'refresh_token': refreshToken},
       );
 

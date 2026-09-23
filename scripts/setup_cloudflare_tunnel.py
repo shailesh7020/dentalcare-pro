@@ -63,20 +63,39 @@ ingress:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="DentalCare Pro - Cloudflare Tunnel Setup Assistant")
-    parser.add_argument("--hostname", default="clinic.dentalcarepro.local", help="Public domain/subdomain for clinic")
+    parser.add_argument("--hostname", default="clinic.dentalcarepro.com", help="Public domain/subdomain for clinic")
     parser.add_argument("--tunnel-name", default="dentalcare-clinic", help="Cloudflare tunnel name")
+    parser.add_argument("--quick", action="store_true", help="Launch an instant ephemeral test tunnel (*.trycloudflare.com) without account setup")
     parser.add_argument("--dry-run", action="store_true", help="Print configuration without modifying files")
     args = parser.parse_args()
 
     print("\n===========================================================")
-    print("DENTALCARE PRO – CLOUDFLARE TUNNEL SETUP ASSISTANT")
+    print("DENTALCARE PRO – CLOUDFLARE REMOTE ACCESS ASSISTANT")
     print("===========================================================\n")
 
     bin_path = check_cloudflared_installed()
     if not bin_path:
         print("[!] Cloudflare Tunnel daemon (cloudflared.exe) is not detected in PATH.")
-        print("    Download MSI installer: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.msi")
-        print("    Or run via winget: winget install --id Cloudflare.cloudflared\n")
+        print("    Install in 5 seconds with PowerShell / Command Prompt:")
+        print("    winget install --id Cloudflare.cloudflared\n")
+        print("    Or download MSI directly:")
+        print("    https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.msi\n")
+        if not args.dry_run:
+            print("[*] Proceeding with configuration generation...\n")
+
+    if args.quick:
+        cmd = bin_path or "cloudflared"
+        print("[*] Launching Quick Zero-Setup Tunnel to FastAPI backend (:8000)...")
+        print("    This will provide a free, instant HTTPS URL (*.trycloudflare.com)")
+        print("    to test mobile logins from outside the clinic network!\n")
+        print(f"    Executing: {cmd} tunnel --url http://127.0.0.1:8000\n")
+        try:
+            subprocess.run([str(cmd), "tunnel", "--url", "http://127.0.0.1:8000"])
+        except KeyboardInterrupt:
+            print("\n[+] Quick tunnel stopped.")
+        except FileNotFoundError:
+            print("[!] cloudflared.exe not found. Please install via: winget install --id Cloudflare.cloudflared")
+        return
 
     CLOUDFLARED_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     config_file = CLOUDFLARED_CONFIG_DIR / "config.yml"
@@ -91,7 +110,7 @@ def main() -> None:
     )
 
     if args.dry_run:
-        print("[*] Dry-run mode. Proposed config:")
+        print("[*] Dry-run mode. Proposed configuration:")
         print(config_content)
         return
 
@@ -103,17 +122,20 @@ def main() -> None:
         local_config.write_text(config_content, encoding="utf-8")
         print(f"[!] Administrator rights required for C:\\ProgramData. Saved locally to: {local_config.resolve()}")
 
-    print("\nNext Steps to start Remote Access:")
-    print("1. Login to Cloudflare:")
+    print("\nNext Steps to start Remote Mobile Access:")
+    print("1. Authenticate with Cloudflare (once):")
     print("   cloudflared.exe tunnel login")
-    print("2. Create tunnel:")
+    print("2. Create Named Tunnel:")
     print(f"   cloudflared.exe tunnel create {args.tunnel_name}")
-    print("3. Route DNS traffic:")
+    print("3. Route Public Subdomain:")
     print(f"   cloudflared.exe tunnel route dns {args.tunnel_name} {args.hostname}")
     print("4. Install as continuous Windows Background Service:")
     print("   cloudflared.exe service install")
     print("   net start cloudflared")
-    print("\n[+] Clinic server is ready for secure zero-trust remote access.\n")
+    print(f"\n[+] Mobile App Setup:")
+    print(f"    In DentalCare Pro Mobile, open Server Connection settings (gear icon)")
+    print(f"    and enter: https://{args.hostname}/api/v1")
+    print(f"    Mobile devices on 4G/5G/cellular can now log in securely!\n")
 
 
 if __name__ == "__main__":

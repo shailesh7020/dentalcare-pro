@@ -48,6 +48,8 @@ export default function PrescriptionDetailPage({
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [whatsAppSuccess, setWhatsAppSuccess] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Fetch Prescription
@@ -156,9 +158,13 @@ export default function PrescriptionDetailPage({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
+      const patientSlug = (rxQuery.data.patient_name || "Patient")
+        .trim()
+        .replace(/[^A-Za-z0-9]+/g, "_")
+        .toUpperCase();
       link.setAttribute(
         "download",
-        `Prescription-${rxQuery.data.prescription_number}.pdf`
+        `${patientSlug}_Prescription_${rxQuery.data.prescription_number}.pdf`
       );
       document.body.appendChild(link);
       link.click();
@@ -169,6 +175,35 @@ export default function PrescriptionDetailPage({
       alert("Could not generate prescription PDF.");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!rxQuery.data) return;
+    try {
+      setSendingWhatsApp(true);
+      setErrorMessage(null);
+      setWhatsAppSuccess(null);
+      const res = await api.post(`/prescriptions/${id}/send-whatsapp`, {});
+      const data = res.data;
+      if (data?.success === false) {
+        setErrorMessage(
+          data.error ||
+            "WhatsApp Gateway is not paired yet. Please link WhatsApp from Patient Report or Billing."
+        );
+      } else {
+        setWhatsAppSuccess(
+          `Direct PDF (${data?.filename || "Prescription.pdf"}) sent to patient's WhatsApp (${data?.recipient || ""})!`
+        );
+      }
+    } catch (err: any) {
+      setErrorMessage(
+        err.response?.data?.detail ||
+          err.message ||
+          "Failed to send prescription PDF to WhatsApp."
+      );
+    } finally {
+      setSendingWhatsApp(false);
     }
   };
 
@@ -305,12 +340,29 @@ export default function PrescriptionDetailPage({
               <Download size={13} />{" "}
               {downloading ? "Generating..." : "Download Official PDF"}
             </button>
+
+            <button
+              onClick={handleSendWhatsApp}
+              disabled={sendingWhatsApp}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md shadow-2xs disabled:opacity-50 transition-colors"
+              title="Send Prescription PDF directly to patient's WhatsApp"
+            >
+              <CheckCircle2 size={13} />{" "}
+              {sendingWhatsApp ? "Sending to WhatsApp..." : "Send PDF on WhatsApp"}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Main Printable Document Sheet */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 space-y-6 print:p-0 print:m-0 print:max-w-none">
+        {whatsAppSuccess && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-md flex items-center gap-2 text-xs text-emerald-800 print:hidden">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span className="font-semibold">{whatsAppSuccess}</span>
+          </div>
+        )}
+
         {/* Error Notification */}
         {errorMessage && (
           <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-3 text-rose-800 text-xs print:hidden">

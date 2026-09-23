@@ -256,9 +256,9 @@ class InventoryPDFService:
                 Paragraph(name_text, cell_style),
                 Paragraph(str(it.quantity_ordered), cell_style),
                 Paragraph(str(it.quantity_received), cell_style),
-                Paragraph(f"₹{float(it.unit_price):,.2f}", cell_style),
+                Paragraph(f"Rs. {float(it.unit_price):,.2f}", cell_style),
                 Paragraph(f"{float(it.tax_rate):.1f}%", cell_style),
-                Paragraph(f"₹{float(it.total):,.2f}", cell_bold),
+                Paragraph(f"Rs. {float(it.total):,.2f}", cell_bold),
             ])
 
         if len(items_data) == 1:
@@ -290,17 +290,17 @@ class InventoryPDFService:
         grand_total = float(po.grand_total)
 
         totals_data = [
-            [Paragraph("Subtotal:", cell_style), Paragraph(f"₹{subtotal:,.2f}", cell_style)],
-            [Paragraph("Taxes (GST):", cell_style), Paragraph(f"₹{tax:,.2f}", cell_style)],
+            [Paragraph("Subtotal:", cell_style), Paragraph(f"Rs. {subtotal:,.2f}", cell_style)],
+            [Paragraph("Taxes (GST):", cell_style), Paragraph(f"Rs. {tax:,.2f}", cell_style)],
         ]
         if discount > 0:
             totals_data.append([
                 Paragraph("Discount:", cell_style),
-                Paragraph(f"-₹{discount:,.2f}", cell_style),
+                Paragraph(f"-Rs. {discount:,.2f}", cell_style),
             ])
         totals_data.append([
             Paragraph("<b>GRAND TOTAL:</b>", cell_bold),
-            Paragraph(f"<b>₹{grand_total:,.2f}</b>", cell_bold),
+            Paragraph(f"<b>Rs. {grand_total:,.2f}</b>", cell_bold),
         ])
 
         totals_table = Table(totals_data, colWidths=[120, 90])

@@ -106,12 +106,29 @@ function InvoiceComposerContent() {
 
   // 1. Fetch Patients
   const patientsQuery = useQuery({
-    queryKey: ["billing-patients-search", patientSearch],
+    queryKey: ["billing-patients-search", patientSearch, patientId],
     queryFn: async () => {
-      const res = await api.get<PatientOption[]>("/patients", {
-        params: { search: patientSearch.trim() || undefined, limit: 15 },
+      const res = await api.get<{ items: PatientOption[] } | PatientOption[]>("/patients", {
+        params: { search: patientSearch.trim() || undefined, limit: 50 },
       });
-      return res.data;
+      const data = res.data;
+      const list: PatientOption[] = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+        ? data.items
+        : [];
+
+      if (patientId && !list.some((p) => p.id === patientId)) {
+        try {
+          const singleRes = await api.get<PatientOption>(`/patients/${patientId}`);
+          if (singleRes.data?.id) {
+            return [singleRes.data, ...list];
+          }
+        } catch {
+          // Ignore if patient lookup fails
+        }
+      }
+      return list;
     },
   });
 
@@ -119,21 +136,38 @@ function InvoiceComposerContent() {
   const usersQuery = useQuery({
     queryKey: ["billing-dentists-list"],
     queryFn: async () => {
-      const res = await api.get<UserOption[]>("/users", {
-        params: { limit: 50 },
-      });
-      return res.data.filter((u) =>
-        ["DENTIST", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(u.role)
-      );
+      try {
+        const res = await api.get<{ items: UserOption[] } | UserOption[]>("/users", {
+          params: { limit: 50 },
+        });
+        const data = res.data;
+        const list: UserOption[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+          ? data.items
+          : [];
+        return list.filter((u) =>
+          ["DENTIST", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(u.role)
+        );
+      } catch {
+        const fallback = await api.get<{ items: UserOption[] } | UserOption[]>("/dentists");
+        const data = fallback.data;
+        return Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+          ? data.items
+          : [];
+      }
     },
   });
 
   // Set default dentist if available
+  const cliniciansList: UserOption[] = Array.isArray(usersQuery.data) ? usersQuery.data : [];
   useEffect(() => {
-    if (!dentistId && usersQuery.data && usersQuery.data.length > 0) {
-      setDentistId(usersQuery.data[0].id);
+    if (!dentistId && cliniciansList.length > 0) {
+      setDentistId(cliniciansList[0].id);
     }
-  }, [usersQuery.data, dentistId]);
+  }, [cliniciansList, dentistId]);
 
   // 3. Fetch Treatment Details if treatment_id is set
   const treatmentQuery = useQuery({
@@ -289,7 +323,12 @@ function InvoiceComposerContent() {
     createInvoiceMutation.mutate(payload);
   };
 
-  const selectedPatient = patientsQuery.data?.find((p) => p.id === patientId);
+  const patientsList: PatientOption[] = Array.isArray(patientsQuery.data)
+    ? patientsQuery.data
+    : Array.isArray((patientsQuery.data as any)?.items)
+    ? (patientsQuery.data as any).items
+    : [];
+  const selectedPatient = patientsList.find((p) => p.id === patientId);
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-6 md:p-8">
@@ -352,7 +391,7 @@ function InvoiceComposerContent() {
                 required
               >
                 <option value="">-- Choose Patient --</option>
-                {patientsQuery.data?.map((p) => (
+                {patientsList.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.first_name} {p.last_name} ({p.patient_number})
                   </option>
@@ -379,9 +418,9 @@ function InvoiceComposerContent() {
                 required
               >
                 <option value="">-- Choose Clinician --</option>
-                {usersQuery.data?.map((u) => (
+                {cliniciansList.map((u) => (
                   <option key={u.id} value={u.id}>
-                    Dr. {u.first_name} {u.last_name} ({u.role})
+                    Dr. {u.first_name} {u.last_name} ({u.role || "DENTIST"})
                   </option>
                 ))}
               </select>

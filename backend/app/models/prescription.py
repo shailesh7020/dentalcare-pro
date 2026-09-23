@@ -40,6 +40,7 @@ class MedicineForm(StrEnum):
     CAPSULE = "CAPSULE"
     SYRUP = "SYRUP"
     INJECTION = "INJECTION"
+    DROPS = "DROPS"
     GEL = "GEL"
     CREAM = "CREAM"
     MOUTHWASH = "MOUTHWASH"
@@ -54,6 +55,7 @@ class DosageFrequency(StrEnum):
     TDS = "TDS"  # Thrice daily (Ter Die Sumendum)
     QID = "QID"  # Four times daily (Quater In Die)
     SOS = "SOS"  # As needed (Si Opus Sit)
+    STAT = "STAT"  # Immediately (Statim)
     WEEKLY = "WEEKLY"
     MONTHLY = "MONTHLY"
     CUSTOM = "CUSTOM"

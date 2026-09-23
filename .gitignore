@@ -30,3 +30,11 @@ __pycache__/
 .coverage
 .coverage.*
 *.coverage
+
+# Local runtime storage & WhatsApp session credentials
+storage/
+backend/test_*.pdf
+backend/test_*.png
+backend/sample_upgraded_receipt.*
+backend/test_gen.py
+

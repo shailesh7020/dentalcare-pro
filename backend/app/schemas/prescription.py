@@ -123,11 +123,11 @@ class PrescriptionTemplateRead(PrescriptionTemplateBase):
 
 class PrescriptionCreate(BaseModel):
     patient_id: UUID
-    treatment_id: UUID
-    appointment_id: UUID
-    dentist_id: UUID
+    treatment_id: UUID | None = None
+    appointment_id: UUID | None = None
+    dentist_id: UUID | None = None
     date: dt_date | None = None
-    diagnosis: str = Field(..., min_length=1, max_length=1000)
+    diagnosis: str = Field(default="General Dental Consultation", min_length=1, max_length=1000)
     notes: str | None = Field(None, max_length=2000)
     instructions: str | None = Field(None, max_length=2000)
     follow_up_date: dt_date | None = None

@@ -241,16 +241,16 @@ export default function OdontogramPage() {
       )}
 
       {/* Top Breadcrumb & Patient Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div>
           <Link
             href={`/patients/${id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 hover:text-teal-800 mb-2 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 mb-2 transition-colors"
           >
             <ArrowLeft size={13} /> Back to Patient Profile
           </Link>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900">{patient_name}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{patient_name}</h1>
             <Badge variant="secondary" className="font-mono text-xs">
               {patient_number}
             </Badge>
@@ -258,7 +258,7 @@ export default function OdontogramPage() {
               Interactive Odontogram (Dental Chart)
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Permanent Visual Electronic Dental Record (EDR) · Independent 8-Surface Charting
           </p>
         </div>
@@ -276,41 +276,41 @@ export default function OdontogramPage() {
 
       {/* Live Odontogram KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1">
             <Activity size={12} /> Active Caries
           </span>
-          <p className="text-xl font-bold text-slate-900 mt-1">{stats.active_caries}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.active_caries}</p>
         </div>
-        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
             Missing Teeth
           </span>
-          <p className="text-xl font-bold text-slate-900 mt-1">{stats.missing_teeth}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.missing_teeth}</p>
         </div>
-        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 flex items-center gap-1">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1">
             Root Canals
           </span>
-          <p className="text-xl font-bold text-slate-900 mt-1">{stats.root_canals}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.root_canals}</p>
         </div>
-        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 flex items-center gap-1">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
             Crowns
           </span>
-          <p className="text-xl font-bold text-slate-900 mt-1">{stats.crowns}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.crowns}</p>
         </div>
-        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1">
             Implants
           </span>
-          <p className="text-xl font-bold text-slate-900 mt-1">{stats.implants}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.implants}</p>
         </div>
-        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1">
             Restorations
           </span>
-          <p className="text-xl font-bold text-slate-900 mt-1">{stats.restorations}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.restorations}</p>
         </div>
       </div>
 

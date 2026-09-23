@@ -87,6 +87,194 @@ function MedicineStockBadge({ medicineName }: { medicineName: string }) {
   return null;
 }
 
+const QUICK_DIAGNOSIS_CHIPS = [
+  "Dental Caries & Odontalgia",
+  "Acute Apical Periodontitis (RCT)",
+  "Post-Extraction Surgical Prophylaxis",
+  "Pericoronitis / Wisdom Tooth Pain",
+  "Acute Gingivitis / Periodontitis",
+  "Post-Implant Surgical Coverage",
+  "Dentin Hypersensitivity",
+  "Oral Ulcer / Aphthous Stomatitis",
+];
+
+const QUICK_ADD_MEDICINES: PrescriptionItemCreate[] = [
+  {
+    medicine_name: "Augmentin 625 Duo",
+    generic_name: "Amoxicillin + Clavulanic Acid",
+    brand_name: "Augmentin 625 Duo",
+    strength: "625 mg",
+    form: "TABLET",
+    dosage: "1 tablet",
+    route: "Oral",
+    frequency: "BD",
+    duration: "5 days",
+    quantity: 10,
+    timing: "Morning - Night",
+    food_instructions: "After food",
+    notes: "Broad-spectrum antibiotic coverage.",
+  },
+  {
+    medicine_name: "Amoxicillin",
+    generic_name: "Amoxicillin",
+    brand_name: "Amoxil 500",
+    strength: "500 mg",
+    form: "CAPSULE",
+    dosage: "1 capsule",
+    route: "Oral",
+    frequency: "TDS",
+    duration: "5 days",
+    quantity: 15,
+    timing: "Morning - Afternoon - Night",
+    food_instructions: "After food",
+    notes: "First-line antibacterial coverage.",
+  },
+  {
+    medicine_name: "Zerodol-SP",
+    generic_name: "Aceclofenac + Paracetamol + Serratiopeptidase",
+    brand_name: "Zerodol-SP",
+    strength: "100/325/15 mg",
+    form: "TABLET",
+    dosage: "1 tablet",
+    route: "Oral",
+    frequency: "BD",
+    duration: "5 days",
+    quantity: 10,
+    timing: "Morning - Night",
+    food_instructions: "After food",
+    notes: "Anti-inflammatory, analgesic & anti-edema.",
+  },
+  {
+    medicine_name: "Ketorol DT",
+    generic_name: "Ketorolac Tromethamine",
+    brand_name: "Ketorol DT",
+    strength: "10 mg",
+    form: "TABLET",
+    dosage: "1 tablet",
+    route: "Oral",
+    frequency: "SOS",
+    duration: "3 days",
+    quantity: 6,
+    timing: "As needed for severe pain",
+    food_instructions: "Dissolve in half glass water after food",
+    notes: "For acute dental pain relief.",
+  },
+  {
+    medicine_name: "Dolo 650",
+    generic_name: "Paracetamol",
+    brand_name: "Dolo 650",
+    strength: "650 mg",
+    form: "TABLET",
+    dosage: "1 tablet",
+    route: "Oral",
+    frequency: "TDS",
+    duration: "3 days",
+    quantity: 9,
+    timing: "Morning - Afternoon - Night",
+    food_instructions: "After food",
+    notes: "Antipyretic and mild analgesic.",
+  },
+  {
+    medicine_name: "Flagyl 400",
+    generic_name: "Metronidazole",
+    brand_name: "Flagyl 400",
+    strength: "400 mg",
+    form: "TABLET",
+    dosage: "1 tablet",
+    route: "Oral",
+    frequency: "TDS",
+    duration: "5 days",
+    quantity: 15,
+    timing: "Morning - Afternoon - Night",
+    food_instructions: "After food (Avoid alcohol)",
+    notes: "Anaerobic infection coverage.",
+  },
+  {
+    medicine_name: "Pan-D 40",
+    generic_name: "Pantoprazole + Domperidone",
+    brand_name: "Pan-D",
+    strength: "40 mg",
+    form: "CAPSULE",
+    dosage: "1 capsule",
+    route: "Oral",
+    frequency: "OD",
+    duration: "5 days",
+    quantity: 5,
+    timing: "Morning empty stomach",
+    food_instructions: "30 mins before breakfast",
+    notes: "Gastroprotection with antibiotics/NSAIDs.",
+  },
+  {
+    medicine_name: "Chymoral Forte",
+    generic_name: "Trypsin + Chymotrypsin",
+    brand_name: "Chymoral Forte",
+    strength: "100000 AU",
+    form: "TABLET",
+    dosage: "1 tablet",
+    route: "Oral",
+    frequency: "TDS",
+    duration: "5 days",
+    quantity: 15,
+    timing: "Morning - Afternoon - Night",
+    food_instructions: "30 mins before food",
+    notes: "Reduces post-operative swelling.",
+  },
+  {
+    medicine_name: "Hexidine Mouthwash",
+    generic_name: "Chlorhexidine Gluconate",
+    brand_name: "Hexidine 0.2%",
+    strength: "0.2% w/v",
+    form: "MOUTHWASH",
+    dosage: "10 ml undiluted",
+    route: "Topical",
+    frequency: "BD",
+    duration: "7 days",
+    quantity: 1,
+    timing: "Morning - Night",
+    food_instructions: "Rinse 30s after meals; do not eat/drink for 30m",
+    notes: "Antiseptic plaque & gingival control.",
+  },
+  {
+    medicine_name: "Sensodent-K Paste",
+    generic_name: "Potassium Nitrate",
+    brand_name: "Sensodent-K",
+    strength: "5% w/w",
+    form: "DENTAL_PASTE",
+    dosage: "Pea-sized amount",
+    route: "Topical",
+    frequency: "BD",
+    duration: "14 days",
+    quantity: 1,
+    timing: "Morning - Night",
+    food_instructions: "Apply with soft brush, leave 2 mins then spit",
+    notes: "Desensitizing dental paste.",
+  },
+];
+
+function computeAutoQuantity(
+  frequency: string,
+  duration: string,
+  form: string
+): number | null {
+  if (["MOUTHWASH", "DENTAL_PASTE", "GEL", "CREAM", "SYRUP", "DROPS"].includes(form)) {
+    return 1;
+  }
+  const daysMatch = duration.match(/(\d+)/);
+  const days = daysMatch ? parseInt(daysMatch[1], 10) : 0;
+  if (!days || days <= 0) return null;
+
+  const freqMap: Record<string, number> = {
+    OD: 1,
+    BD: 2,
+    TDS: 3,
+    QID: 4,
+    SOS: 2,
+    STAT: 1,
+  };
+  const perDay = freqMap[frequency] ?? 2;
+  return Math.max(1, perDay * days);
+}
+
 function PrescriptionWizardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -97,12 +285,13 @@ function PrescriptionWizardContent() {
 
   const [patientId, setPatientId] = useState<string>(queryPatientId);
   const [patientSearch, setPatientSearch] = useState<string>("");
-  const [diagnosis, setDiagnosis] = useState<string>("");
+  const [diagnosis, setDiagnosis] = useState<string>("Dental Caries & Odontalgia");
   const [instructions, setInstructions] = useState<string>(
-    "1. Complete the full antibiotic course as prescribed.\n2. Take painkillers after meals.\n3. Return immediately if you experience severe pain, swelling, or allergic rash."
+    "1. Complete the full antibiotic course as prescribed.\n2. Take painkillers after meals.\n3. Warm saline gargles 3-4 times daily.\n4. Return immediately if you experience severe pain, swelling, or allergic rash."
   );
   const [notes, setNotes] = useState<string>("");
   const [followUpDate, setFollowUpDate] = useState<string>("");
+  const [sendWhatsAppAfterIssue, setSendWhatsAppAfterIssue] = useState<boolean>(false);
 
   const [items, setItems] = useState<PrescriptionItemCreate[]>([
     {
@@ -155,13 +344,15 @@ function PrescriptionWizardContent() {
   const patientListQuery = useQuery({
     queryKey: ["patients-search", patientSearch],
     queryFn: async () => {
-      if (!patientSearch || patientSearch.length < 2) return [];
       const res = await api.get("/patients", {
-        params: { search: patientSearch, limit: 10 },
+        params: { search: patientSearch.trim() || undefined, limit: 15 },
       });
-      return res.data;
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.items)) return data.items;
+      return [];
     },
-    enabled: patientSearch.length >= 2,
+    enabled: !patientId,
   });
 
   // Fetch Procedure Templates
@@ -213,6 +404,8 @@ function PrescriptionWizardContent() {
   const applyTemplate = (tmpl: PrescriptionTemplateItem) => {
     if (tmpl.diagnosis_template) {
       setDiagnosis(tmpl.diagnosis_template);
+    } else if (tmpl.name) {
+      setDiagnosis(tmpl.name);
     }
     if (tmpl.instructions_template) {
       setInstructions(tmpl.instructions_template);
@@ -238,19 +431,36 @@ function PrescriptionWizardContent() {
     }
   };
 
+  // Toggle Quick-Add Medicine
+  const toggleQuickMedicine = (preset: PrescriptionItemCreate) => {
+    const existsIdx = items.findIndex(
+      (it) =>
+        it.medicine_name.trim().toLowerCase() ===
+        preset.medicine_name.trim().toLowerCase()
+    );
+    if (existsIdx >= 0) {
+      setItems((prev) => prev.filter((_, i) => i !== existsIdx));
+    } else {
+      setItems((prev) => [...prev, { ...preset }]);
+    }
+  };
+
   // Add Item from Catalog
   const addMedicineFromCatalog = (medItem: MedicineCatalogItem) => {
+    const freq = medItem.default_frequency || "BD";
+    const dur = medItem.default_duration || "5 days";
+    const form = medItem.form || "TABLET";
     const newItem: PrescriptionItemCreate = {
       medicine_name: medItem.brand_name || medItem.generic_name,
       generic_name: medItem.generic_name,
       brand_name: medItem.brand_name,
       strength: medItem.strength || "",
-      form: medItem.form || "TABLET",
-      dosage: medItem.standard_dosage || "1 unit",
+      form,
+      dosage: medItem.standard_dosage || "1 tablet",
       route: medItem.default_route || "Oral",
-      frequency: medItem.default_frequency || "BD",
-      duration: medItem.default_duration || "5 days",
-      quantity: 10,
+      frequency: freq,
+      duration: dur,
+      quantity: computeAutoQuantity(freq, dur, form) ?? 10,
       timing: "Morning - Night",
       food_instructions: medItem.default_instructions || "After food",
       notes: medItem.notes || "",
@@ -267,7 +477,7 @@ function PrescriptionWizardContent() {
         medicine_name: "",
         generic_name: "",
         brand_name: "",
-        strength: "",
+        strength: "500 mg",
         form: "TABLET",
         dosage: "1 tablet",
         route: "Oral",
@@ -288,23 +498,39 @@ function PrescriptionWizardContent() {
   const updateItem = (index: number, field: keyof PrescriptionItemCreate, val: any) => {
     setItems((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: val };
+      const nextRow = { ...updated[index], [field]: val };
+      if (field === "frequency" || field === "duration" || field === "form") {
+        const autoQty = computeAutoQuantity(
+          String(nextRow.frequency || "BD"),
+          String(nextRow.duration || "5 days"),
+          String(nextRow.form || "TABLET")
+        );
+        if (autoQty !== null) {
+          nextRow.quantity = autoQty;
+        }
+      }
+      updated[index] = nextRow;
       return updated;
     });
   };
 
   // Mutation to Create Prescription
   const createMutation = useMutation({
-    mutationFn: async (issueImmediately: boolean) => {
+    mutationFn: async ({
+      issueImmediately,
+      alsoSendWhatsApp,
+    }: {
+      issueImmediately: boolean;
+      alsoSendWhatsApp?: boolean;
+    }) => {
       setErrorMessage(null);
+      setSendWhatsAppAfterIssue(Boolean(alsoSendWhatsApp));
       if (!patientId) {
-        throw new Error("Please select a patient before saving prescription.");
+        throw new Error("Please select a patient first.");
       }
-      if (!diagnosis.trim()) {
-        throw new Error("Clinical diagnosis is required.");
-      }
-      if (issueImmediately && items.length === 0) {
-        throw new Error("Cannot issue an empty prescription without medications.");
+      const validItems = items.filter((it) => it.medicine_name.trim().length > 0);
+      if (issueImmediately && validItems.length === 0) {
+        throw new Error("Please add at least one medicine before issuing.");
       }
       if (duplicateNames.length > 0) {
         throw new Error(
@@ -312,30 +538,56 @@ function PrescriptionWizardContent() {
         );
       }
 
-      const payload: PrescriptionCreate = {
+      const finalDiagnosis =
+        diagnosis.trim() || "General Dental Consultation & Pain Management";
+
+      const payload: any = {
         patient_id: patientId,
         treatment_id: queryTreatmentId || null,
         appointment_id: queryAppointmentId || null,
-        diagnosis: diagnosis.trim(),
+        diagnosis: finalDiagnosis,
         notes: notes.trim() || null,
         instructions: instructions.trim() || null,
         follow_up_date: followUpDate || null,
-        items: items.map((it) => ({
+        items: validItems.map((it) => ({
           ...it,
-          quantity: Number(it.quantity) || 1,
+          strength: (it.strength || "Standard").trim(),
+          dosage: (it.dosage || "1 unit").trim(),
+          duration: (it.duration || "5 days").trim(),
+          quantity: Math.max(1, Number(it.quantity) || 1),
         })),
         issue_immediately: issueImmediately,
       };
 
       const res = await api.post<PrescriptionDetail>("/prescriptions", payload);
-      return res.data;
+      const createdRx = res.data;
+
+      if (alsoSendWhatsApp && createdRx?.id) {
+        try {
+          await api.post(`/prescriptions/${createdRx.id}/send-whatsapp`, {});
+        } catch (waErr) {
+          console.warn("WhatsApp auto-send warning:", waErr);
+        }
+      }
+
+      return { createdRx, sentWhatsApp: Boolean(alsoSendWhatsApp) };
     },
-    onSuccess: (data) => {
-      router.push(`/prescriptions/${data.id}`);
+    onSuccess: ({ createdRx, sentWhatsApp }) => {
+      router.push(
+        `/prescriptions/${createdRx.id}${sentWhatsApp ? "?whatsapp=sent" : ""}`
+      );
     },
     onError: (err: any) => {
-      const detail = err.response?.data?.detail || err.message || "Failed to create prescription.";
-      setErrorMessage(detail);
+      const rawDetail = err.response?.data?.detail;
+      let formatted = err.message || "Failed to create prescription.";
+      if (typeof rawDetail === "string") {
+        formatted = rawDetail;
+      } else if (Array.isArray(rawDetail)) {
+        formatted = rawDetail
+          .map((d: any) => `${(d.loc || []).slice(-1)[0] || "Field"}: ${d.msg}`)
+          .join(" | ");
+      }
+      setErrorMessage(formatted);
     },
   });
 
@@ -343,7 +595,7 @@ function PrescriptionWizardContent() {
     <main className="min-h-screen bg-slate-50/60 pb-28">
       {/* Top Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
               href="/prescriptions"
@@ -358,29 +610,58 @@ function PrescriptionWizardContent() {
                   Write Clinical Prescription
                 </h1>
                 <span className="text-xs bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-semibold">
-                  Rx Composer
+                  1-Click Fast Rx Pad
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Structured dental medication charting with 1-click clinical templates
+                Tap a procedure template or quick medicine pill below to issue & WhatsApp Rx in seconds
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => createMutation.mutate(false)}
+              onClick={() =>
+                createMutation.mutate({
+                  issueImmediately: false,
+                  alsoSendWhatsApp: false,
+                })
+              }
               disabled={createMutation.isPending}
               className="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md shadow-2xs disabled:opacity-50 transition-colors"
             >
               Save as Draft
             </button>
             <button
-              onClick={() => createMutation.mutate(true)}
+              onClick={() =>
+                createMutation.mutate({
+                  issueImmediately: true,
+                  alsoSendWhatsApp: false,
+                })
+              }
               disabled={createMutation.isPending}
               className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold rounded-md shadow-2xs disabled:opacity-50 transition-colors flex items-center gap-1.5"
             >
-              <CheckCircle2 size={14} /> Issue & Sign Prescription
+              <CheckCircle2 size={14} />
+              {createMutation.isPending && !sendWhatsAppAfterIssue
+                ? "Issuing..."
+                : "Issue & Sign Prescription"}
+            </button>
+            <button
+              onClick={() =>
+                createMutation.mutate({
+                  issueImmediately: true,
+                  alsoSendWhatsApp: true,
+                })
+              }
+              disabled={createMutation.isPending}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md shadow-xs disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              title="Issue prescription and immediately send the PDF directly to the patient's WhatsApp"
+            >
+              <CheckCircle2 size={14} />
+              {createMutation.isPending && sendWhatsAppAfterIssue
+                ? "Sending PDF to WhatsApp..."
+                : "Issue & Send PDF on WhatsApp"}
             </button>
           </div>
         </div>
@@ -496,6 +777,45 @@ function PrescriptionWizardContent() {
               </div>
             </div>
           )}
+
+          {/* Quick Diagnosis Bar right at the top */}
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Stethoscope size={14} className="text-teal-600" />
+                Clinical Diagnosis / Indication:
+              </label>
+              <span className="text-[11px] text-slate-400">
+                Tap a common diagnosis chip or type custom diagnosis
+              </span>
+            </div>
+            <input
+              type="text"
+              value={diagnosis}
+              onChange={(e) => setDiagnosis(e.target.value)}
+              placeholder="e.g. Dental Caries & Odontalgia / Post-extraction surgical coverage"
+              className="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-1 focus:ring-teal-600 text-slate-900"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_DIAGNOSIS_CHIPS.map((chip) => {
+                const isSelected = diagnosis.trim().toLowerCase() === chip.toLowerCase();
+                return (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setDiagnosis(chip)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
+                      isSelected
+                        ? "bg-teal-600 text-white border-teal-600 shadow-2xs"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:border-teal-400 hover:text-teal-700"
+                    }`}
+                  >
+                    {chip}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </section>
 
         {/* Section 2: 1-Click Procedure Templates */}
@@ -586,6 +906,53 @@ function PrescriptionWizardContent() {
             </div>
           </div>
 
+          {/* 1-Click Quick-Add Common Dental Medicines Bar */}
+          <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-200/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                ⚡ 1-Click Quick-Add Common Dental Medicines (Tap to Add / Remove):
+              </span>
+              <button
+                type="button"
+                onClick={() => setItems([])}
+                className="text-[11px] text-rose-600 hover:underline font-medium"
+              >
+                Clear All
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_ADD_MEDICINES.map((preset) => {
+                const isAdded = items.some(
+                  (it) =>
+                    it.medicine_name.trim().toLowerCase() ===
+                    preset.medicine_name.trim().toLowerCase()
+                );
+                return (
+                  <button
+                    key={preset.medicine_name}
+                    type="button"
+                    onClick={() => toggleQuickMedicine(preset)}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+                      isAdded
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-teal-500 hover:bg-teal-50/40"
+                    }`}
+                  >
+                    <span>{isAdded ? "✓" : "+"}</span>
+                    <span>{preset.medicine_name}</span>
+                    <span
+                      className={`text-[10px] font-normal ${
+                        isAdded ? "text-emerald-100" : "text-slate-400"
+                      }`}
+                    >
+                      ({preset.frequency} × {preset.duration})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Duplicate Warning */}
           {duplicateNames.length > 0 && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-2 text-xs text-amber-800">
@@ -607,7 +974,7 @@ function PrescriptionWizardContent() {
                   <th className="py-2.5 px-3 min-w-[100px]">Strength</th>
                   <th className="py-2.5 px-3 min-w-[100px]">Dosage</th>
                   <th className="py-2.5 px-3 min-w-[90px]">Frequency</th>
-                  <th className="py-2.5 px-3 min-w-[90px]">Duration</th>
+                  <th className="py-2.5 px-3 min-w-[110px]">Duration</th>
                   <th className="py-2.5 px-3 min-w-[70px]">Qty</th>
                   <th className="py-2.5 px-3 min-w-[120px]">Food & Timing</th>
                   <th className="py-2.5 px-3 text-right">Del</th>
@@ -645,6 +1012,7 @@ function PrescriptionWizardContent() {
                         <option value="CAPSULE">CAPSULE</option>
                         <option value="SYRUP">SYRUP</option>
                         <option value="MOUTHWASH">MOUTHWASH</option>
+                        <option value="DENTAL_PASTE">DENTAL PASTE</option>
                         <option value="GEL">GEL</option>
                         <option value="INJECTION">INJECTION</option>
                         <option value="DROPS">DROPS</option>
@@ -710,6 +1078,22 @@ function PrescriptionWizardContent() {
                         placeholder="5 days"
                         className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-teal-600"
                       />
+                      <div className="flex items-center gap-1 mt-1">
+                        {["3 days", "5 days", "7 days"].map((durPreset) => (
+                          <button
+                            key={durPreset}
+                            type="button"
+                            onClick={() => updateItem(idx, "duration", durPreset)}
+                            className={`px-1.5 py-0.5 text-[9px] rounded border ${
+                              item.duration === durPreset
+                                ? "bg-teal-600 text-white border-teal-600 font-bold"
+                                : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                            }`}
+                          >
+                            {durPreset.replace(" days", "d")}
+                          </button>
+                        ))}
+                      </div>
                     </td>
 
                     {/* Quantity */}

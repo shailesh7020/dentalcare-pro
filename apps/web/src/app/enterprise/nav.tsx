@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Megaphone,
   Sparkles,
+  Smartphone,
 } from "lucide-react";
 
 interface NavItem {
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { name: "Consolidated Financials", href: "/enterprise/financials", icon: CircleDollarSign },
   { name: "AI Benchmark Analytics", href: "/enterprise/analytics", icon: TrendingUp },
   { name: "Announcements", href: "/enterprise/announcements", icon: Megaphone },
+  { name: "Remote & Mobile Access", href: "/enterprise/remote", icon: Smartphone },
 ];
 
 export function EnterpriseNav() {

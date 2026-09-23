@@ -45,7 +45,7 @@ class UserCreate(BaseModel):
 class UserRead(BaseModel):
     id: UUID
     clinic_id: UUID | None
-    email: EmailStr
+    email: str
     first_name: str
     last_name: str
     role: Role

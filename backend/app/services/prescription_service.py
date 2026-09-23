@@ -40,12 +40,19 @@ class PrescriptionService:
         self,
         clinic_id: UUID,
         patient_id: UUID,
-        treatment_id: UUID,
-        appointment_id: UUID,
-        dentist_id: UUID,
+        treatment_id: UUID | None,
+        appointment_id: UUID | None,
+        dentist_id: UUID | None,
         items: list[PrescriptionItemCreate],
+        actor: User,
+        diagnosis: str = "General Dental Consultation",
         issue_immediately: bool = False,
     ) -> tuple[Patient, Treatment, Appointment, User]:
+        from datetime import time as dt_time
+        import uuid as uuid_pkg
+        from app.models.appointment import AppointmentStatus, Chair, ChairStatus, VisitType
+        from app.models.treatment import TreatmentStatus
+
         # 1. Validate Patient
         patient_q = select(Patient).where(
             Patient.id == patient_id,
@@ -60,65 +67,134 @@ class PrescriptionService:
                 detail="Patient record not found in this clinic.",
             )
 
-        # 2. Validate Treatment
-        treatment_q = select(Treatment).where(
-            Treatment.id == treatment_id,
-            Treatment.clinic_id == clinic_id,
-            Treatment.deleted_at.is_(None),
-        )
-        treatment_res = await self.db.execute(treatment_q)
-        treatment = treatment_res.scalar_one_or_none()
-        if not treatment:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Treatment record not found in this clinic.",
+        # 2. Resolve or Validate Dentist
+        dentist: User | None = None
+        if dentist_id:
+            dentist_q = select(User).where(
+                User.id == dentist_id,
+                User.clinic_id == clinic_id,
+                User.deleted_at.is_(None),
             )
+            dentist = (await self.db.execute(dentist_q)).scalar_one_or_none()
 
-        if treatment.patient_id != patient_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Treatment record does not belong to the specified patient.",
-            )
-
-        # 3. Validate Appointment
-        appointment_q = select(Appointment).where(
-            Appointment.id == appointment_id,
-            Appointment.clinic_id == clinic_id,
-            Appointment.deleted_at.is_(None),
-        )
-        appointment_res = await self.db.execute(appointment_q)
-        appointment = appointment_res.scalar_one_or_none()
-        if not appointment:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Appointment record not found in this clinic.",
-            )
-
-        if appointment.patient_id != patient_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Appointment does not belong to the specified patient.",
-            )
-
-        # 4. Validate Dentist
-        dentist_q = select(User).where(
-            User.id == dentist_id,
-            User.clinic_id == clinic_id,
-            User.deleted_at.is_(None),
-        )
-        dentist_res = await self.db.execute(dentist_q)
-        dentist = dentist_res.scalar_one_or_none()
         if not dentist:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Prescribing dentist not found in this clinic.",
-            )
+            if actor.role in [Role.DENTIST, Role.CLINIC_ADMIN, Role.SUPER_ADMIN]:
+                dentist = actor
+            else:
+                fallback_q = (
+                    select(User)
+                    .where(
+                        User.clinic_id == clinic_id,
+                        User.role.in_([Role.DENTIST, Role.CLINIC_ADMIN, Role.SUPER_ADMIN]),
+                        User.deleted_at.is_(None),
+                    )
+                    .order_by(User.created_at.asc())
+                    .limit(1)
+                )
+                dentist = (await self.db.execute(fallback_q)).scalar_one_or_none() or actor
 
-        if dentist.role not in [Role.DENTIST, Role.CLINIC_ADMIN, Role.SUPER_ADMIN]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User does not have clinical prescribing privileges.",
+        # 3. Resolve or Auto-Create Appointment
+        appointment: Appointment | None = None
+        if appointment_id:
+            appointment_q = select(Appointment).where(
+                Appointment.id == appointment_id,
+                Appointment.clinic_id == clinic_id,
+                Appointment.deleted_at.is_(None),
             )
+            appointment = (await self.db.execute(appointment_q)).scalar_one_or_none()
+
+        if not appointment:
+            # Try latest appointment for this patient
+            latest_apt_q = (
+                select(Appointment)
+                .where(
+                    Appointment.patient_id == patient_id,
+                    Appointment.clinic_id == clinic_id,
+                    Appointment.deleted_at.is_(None),
+                )
+                .order_by(Appointment.date.desc(), Appointment.created_at.desc())
+                .limit(1)
+            )
+            appointment = (await self.db.execute(latest_apt_q)).scalar_one_or_none()
+
+        if not appointment:
+            # Find or create a default chair for quick walk-in prescription encounter
+            chair_q = (
+                select(Chair)
+                .where(Chair.clinic_id == clinic_id, Chair.deleted_at.is_(None))
+                .limit(1)
+            )
+            chair = (await self.db.execute(chair_q)).scalar_one_or_none()
+            if not chair:
+                chair = Chair(
+                    clinic_id=clinic_id,
+                    name="Operatory Chair 1",
+                    room_number="OP-1",
+                    status=ChairStatus.ACTIVE,
+                    is_active=True,
+                )
+                self.db.add(chair)
+                await self.db.flush()
+
+            today = datetime.now(UTC).date()
+            apt_num = f"APT-{today.strftime('%Y%m%d')}-{uuid_pkg.uuid4().hex[:6].upper()}"
+            appointment = Appointment(
+                clinic_id=clinic_id,
+                patient_id=patient_id,
+                dentist_id=dentist.id,
+                chair_id=chair.id,
+                appointment_number=apt_num,
+                date=today,
+                start_time=dt_time(10, 0),
+                end_time=dt_time(10, 30),
+                duration=30,
+                status=AppointmentStatus.COMPLETED,
+                visit_type=VisitType.CONSULTATION,
+                chief_complaint=diagnosis,
+                priority="NORMAL",
+            )
+            self.db.add(appointment)
+            await self.db.flush()
+
+        # 4. Resolve or Auto-Create Treatment
+        treatment: Treatment | None = None
+        if treatment_id:
+            treatment_q = select(Treatment).where(
+                Treatment.id == treatment_id,
+                Treatment.clinic_id == clinic_id,
+                Treatment.deleted_at.is_(None),
+            )
+            treatment = (await self.db.execute(treatment_q)).scalar_one_or_none()
+
+        if not treatment:
+            # Try latest treatment for this patient
+            latest_trt_q = (
+                select(Treatment)
+                .where(
+                    Treatment.patient_id == patient_id,
+                    Treatment.clinic_id == clinic_id,
+                    Treatment.deleted_at.is_(None),
+                )
+                .order_by(Treatment.created_at.desc())
+                .limit(1)
+            )
+            treatment = (await self.db.execute(latest_trt_q)).scalar_one_or_none()
+
+        if not treatment:
+            today = datetime.now(UTC).date()
+            trt_num = f"TRT-{today.strftime('%Y%m%d')}-{uuid_pkg.uuid4().hex[:6].upper()}"
+            treatment = Treatment(
+                clinic_id=clinic_id,
+                patient_id=patient_id,
+                appointment_id=appointment.id,
+                dentist_id=dentist.id,
+                treatment_number=trt_num,
+                diagnosis=diagnosis or "General Dental Consultation",
+                chief_complaint=diagnosis or "General Dental Consultation",
+                status=TreatmentStatus.COMPLETED,
+            )
+            self.db.add(treatment)
+            await self.db.flush()
 
         # 5. Validate Duplicate Medicines
         self._check_duplicate_medicines(items)
@@ -148,15 +224,22 @@ class PrescriptionService:
     async def create_prescription(
         self, clinic_id: UUID, payload: PrescriptionCreate, actor: User
     ) -> PrescriptionDetail:
-        patient, treatment, _appointment, dentist = await self._validate_entities(
+        patient, treatment, appointment, dentist = await self._validate_entities(
             clinic_id=clinic_id,
             patient_id=payload.patient_id,
             treatment_id=payload.treatment_id,
             appointment_id=payload.appointment_id,
             dentist_id=payload.dentist_id,
             items=payload.items,
+            actor=actor,
+            diagnosis=payload.diagnosis,
             issue_immediately=payload.issue_immediately,
         )
+
+        # Populate resolved IDs onto payload before repo.create
+        payload.treatment_id = treatment.id
+        payload.appointment_id = appointment.id
+        payload.dentist_id = dentist.id
 
         # Generate unique prescription number
         rx_number = await self.repo.generate_prescription_number(clinic_id, payload.date)

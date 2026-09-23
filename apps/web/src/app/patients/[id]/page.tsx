@@ -266,6 +266,36 @@ export default function PatientProfilePage({
     },
   });
 
+  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+
+  async function handleDownloadDocument(doc: PatientDocument) {
+    try {
+      setDownloadingDocId(doc.id);
+      const res = await api.get(doc.url, { responseType: "blob" });
+      const blob = new Blob([res.data as BlobPart], {
+        type: doc.content_type || "application/octet-stream",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.setAttribute("download", doc.file_name || "document");
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      showToast(`Downloaded ${doc.file_name}`);
+    } catch (err: any) {
+      console.error("Failed to download document:", err);
+      showToast(
+        err.response?.data?.message ||
+          err.response?.data?.detail ||
+          "Failed to download document"
+      );
+    } finally {
+      setDownloadingDocId(null);
+    }
+  }
+
   function showToast(msg: string) {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -1149,14 +1179,15 @@ export default function PatientProfilePage({
                         </div>
                       </div>
 
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-md transition-colors"
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadDocument(doc)}
+                        disabled={downloadingDocId === doc.id}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        <Download size={13} /> Download
-                      </a>
+                        <Download size={13} />{" "}
+                        {downloadingDocId === doc.id ? "Downloading..." : "Download"}
+                      </button>
                     </div>
                   ))}
                 </div>

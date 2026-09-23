@@ -1,6 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const apiUrl =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (typeof window !== "undefined"
+    ? "/api/v1"
+    : (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000/api/v1"));
 
 export const api = axios.create({ baseURL: apiUrl, timeout: 10_000 });
 

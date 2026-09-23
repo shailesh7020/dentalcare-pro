@@ -184,3 +184,43 @@ async def test_odontogram_repository_append_history_and_stats():
     stats = await repo.get_dashboard_stats(clinic_id, patient_id)
     assert "total_teeth_charted" in stats
     assert stats["total_teeth_charted"] == 32
+
+
+@pytest.mark.asyncio
+async def test_odontogram_repository_partial_repair_and_completion():
+    db = InMemoryDb()
+    repo = OdontogramRepository(db)  # type: ignore[arg-type]
+
+    clinic_id = uuid4()
+    patient_id = uuid4()
+
+    # Pre-seed patient with only 1 tooth that has an invalid quadrant (quad=2 instead of 4)
+    tooth_46 = Tooth(
+        id=uuid4(),
+        clinic_id=clinic_id,
+        patient_id=patient_id,
+        tooth_number="46",
+        dentition_type="ADULT",
+        arch="LOWER",
+        quadrant=2,  # Invalid quadrant (should be 4)
+        primary_status=ToothCondition.FILLING.value,
+        color="#3B82F6",
+        is_missing=False,
+        is_extracted=False,
+    )
+    db.add(tooth_46)
+
+    # Calling get_or_initialize_odontogram must self-heal tooth 46 and complete all 32 teeth
+    teeth = await repo.get_or_initialize_odontogram(
+        clinic_id=clinic_id,
+        patient_id=patient_id,
+        dentition_type=DentitionType.ADULT,
+    )
+
+    assert len(teeth) == 32
+    repaired_46 = next(t for t in teeth if t.tooth_number == "46")
+    assert repaired_46.quadrant == 4
+    assert repaired_46.arch == "LOWER"
+    assert repaired_46.primary_status == ToothCondition.FILLING.value
+    assert len(repaired_46.surfaces) == 7
+

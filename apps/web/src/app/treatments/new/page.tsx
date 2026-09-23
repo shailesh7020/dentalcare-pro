@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,6 +49,7 @@ function TreatmentNewForm() {
   // Form states
   const [patientId, setPatientId] = useState(patientIdParam);
   const [appointmentId, setAppointmentId] = useState(appointmentIdParam);
+  const [isManualAppointment, setIsManualAppointment] = useState(false);
   const [dentistId, setDentistId] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [chiefComplaint, setChiefComplaint] = useState("");
@@ -99,6 +100,22 @@ function TreatmentNewForm() {
     enabled: Boolean(patientId),
   });
 
+  // Load Patient Appointments if patientId is provided
+  const appointmentsQuery = useQuery({
+    queryKey: ["patient-appointments", patientId],
+    queryFn: async () => {
+      if (!patientId) return [];
+      const res = await api.get<any>("/appointments", {
+        params: { patient_id: patientId, limit: 50 },
+      });
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.items)) return data.items;
+      return [];
+    },
+    enabled: Boolean(patientId),
+  });
+
   // Load Appointment Detail if appointmentId is provided
   const appointmentQuery = useQuery({
     queryKey: ["appointment-detail", appointmentId],
@@ -115,21 +132,60 @@ function TreatmentNewForm() {
     queryKey: ["dentists-list"],
     queryFn: async () => {
       const res = await api.get("/dentists");
-      return res.data;
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.items)) return data.items;
+      return [];
     },
   });
 
-  // Auto-sync appointment data when appointmentQuery loads
+  const appointmentsList: any[] = Array.isArray(appointmentsQuery.data)
+    ? appointmentsQuery.data
+    : [];
   const appointmentData = appointmentQuery.data;
   const patientData = patientQuery.data;
 
-  // Auto-fill IDs if appointment loaded
-  if (appointmentData && !dentistId && appointmentData.dentist_id) {
-    setDentistId(appointmentData.dentist_id);
-  }
-  if (appointmentData && !patientId && appointmentData.patient_id) {
-    setPatientId(appointmentData.patient_id);
-  }
+  // Auto-select first active or scheduled appointment if none selected
+  useEffect(() => {
+    if (!appointmentId && appointmentsList.length > 0) {
+      const activeApt =
+        appointmentsList.find(
+          (a) => a.status === "CHECKED_IN" || a.status === "IN_TREATMENT"
+        ) ||
+        appointmentsList.find((a) => a.status === "SCHEDULED") ||
+        appointmentsList[0];
+      if (activeApt) {
+        setAppointmentId(activeApt.id);
+        if (!dentistId && activeApt.dentist_id) {
+          setDentistId(activeApt.dentist_id);
+        }
+      }
+    }
+  }, [appointmentsList, appointmentId, dentistId]);
+
+  // Auto-fill dentist and patient IDs if appointment detail loaded
+  useEffect(() => {
+    if (appointmentData) {
+      if (!dentistId && appointmentData.dentist_id) {
+        setDentistId(appointmentData.dentist_id);
+      }
+      if (!patientId && appointmentData.patient_id) {
+        setPatientId(appointmentData.patient_id);
+      }
+    }
+  }, [appointmentData, dentistId, patientId]);
+
+  const handleSelectAppointment = (id: string) => {
+    if (id === "__MANUAL__") {
+      setIsManualAppointment(true);
+      return;
+    }
+    setAppointmentId(id);
+    const selected = appointmentsList.find((a) => a.id === id);
+    if (selected?.dentist_id) {
+      setDentistId(selected.dentist_id);
+    }
+  };
 
   // Procedure list helpers
   const handleAddProcedure = () => {
@@ -188,25 +244,52 @@ function TreatmentNewForm() {
       router.push(`/treatments/${data.id}`);
     },
     onError: (err: any) => {
+      const data = err.response?.data;
+      if (Array.isArray(data?.error?.details) && data.error.details.length > 0) {
+        const detailMsgs = data.error.details.map((d: any) => {
+          const field = Array.isArray(d.loc) ? d.loc[d.loc.length - 1] : "";
+          const fieldName =
+            field && typeof field === "string" ? field.replace(/_/g, " ") : "";
+          return fieldName ? `${fieldName}: ${d.msg}` : d.msg;
+        });
+        setFormError(detailMsgs.join(" | "));
+        return;
+      }
       setFormError(
-        err.response?.data?.detail || err.message || "Failed to create treatment record."
+        data?.message || data?.detail || err.message || "Failed to create treatment record."
       );
     },
   });
+
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    if (!patientId.trim()) {
+    const cleanPatientId = patientId.trim();
+    const cleanAppointmentId = appointmentId.trim();
+    const cleanDentistId = dentistId.trim();
+
+    if (!cleanPatientId) {
       setFormError("Patient ID is required.");
       return;
     }
-    if (!appointmentId.trim()) {
-      setFormError("Appointment ID is required to link treatment with clinical session.");
+    if (!UUID_REGEX.test(cleanPatientId)) {
+      setFormError("Patient ID must be a valid 36-character UUID.");
       return;
     }
-    if (!dentistId.trim()) {
+    if (!cleanAppointmentId) {
+      setFormError("Please select an appointment to link this clinical treatment session.");
+      return;
+    }
+    if (!UUID_REGEX.test(cleanAppointmentId)) {
+      setFormError(
+        "Appointment ID must be a valid 36-character UUID (e.g. 79a8570e-b6b4-4fb8-b829-16c06fc58848). Please select an appointment from the dropdown list."
+      );
+      return;
+    }
+    if (!cleanDentistId) {
       setFormError("Attending Clinician must be selected.");
       return;
     }
@@ -386,9 +469,17 @@ function TreatmentNewForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section 1: Session Linkage & Clinician Assignment */}
           <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-xs">
-            <h2 className="text-sm font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-              <User size={16} className="text-teal-700" /> 1. Session & Clinician Linkage
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <User size={16} className="text-teal-700" /> 1. Session & Clinician Linkage
+              </h2>
+              {patientData && (
+                <span className="text-xs text-slate-500 font-medium">
+                  Patient: <strong className="text-slate-800">{patientData.first_name} {patientData.last_name}</strong> ({patientData.patient_number})
+                </span>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">
@@ -405,17 +496,68 @@ function TreatmentNewForm() {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Appointment ID <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={appointmentId}
-                  onChange={(e) => setAppointmentId(e.target.value)}
-                  placeholder="UUID of appointment"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
-                  required
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-700 font-semibold">
+                    Appointment Session <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualAppointment((prev) => !prev)}
+                    className="text-[11px] text-teal-600 hover:text-teal-800 font-medium underline"
+                  >
+                    {isManualAppointment ? "Select from list" : "Enter UUID manually"}
+                  </button>
+                </div>
+
+                {isManualAppointment ? (
+                  <input
+                    type="text"
+                    value={appointmentId}
+                    onChange={(e) => setAppointmentId(e.target.value)}
+                    placeholder="Enter 36-char Appointment UUID"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+                    required
+                  />
+                ) : appointmentsQuery.isLoading ? (
+                  <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-slate-400">
+                    Loading appointments...
+                  </div>
+                ) : appointmentsList.length > 0 ? (
+                  <select
+                    value={appointmentId}
+                    onChange={(e) => handleSelectAppointment(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+                    required
+                  >
+                    <option value="">-- Select an Appointment ({appointmentsList.length}) --</option>
+                    {appointmentsList.map((apt: any) => (
+                      <option key={apt.id} value={apt.id}>
+                        #{apt.appointment_number} · {apt.date} at {apt.start_time?.slice(0, 5)} · [{apt.status}] · {apt.dentist_name ? `Dr. ${apt.dentist_name}` : "Assigned"}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-2 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                    <p className="font-semibold">No appointments found</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Link
+                        href={`/appointments?patient_id=${patientId}`}
+                        target="_blank"
+                        className="text-teal-700 underline font-medium hover:text-teal-900"
+                      >
+                        + Book appointment
+                      </Link>
+                      <span>·</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsManualAppointment(true)}
+                        className="underline text-slate-600"
+                      >
+                        Enter UUID
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

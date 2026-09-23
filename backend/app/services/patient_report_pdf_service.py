@@ -53,14 +53,16 @@ class NumberedCanvas(canvas.Canvas):
     def draw_page_decorations(self, page_count: int) -> None:
         self.saveState()
 
-        # Watermark
+        # Watermark (only if explicitly enabled, rendered with ultra-low opacity)
         if self.include_watermark:
             self.saveState()
-            self.setFont("Helvetica-Bold", 46)
-            self.setFillColor(colors.HexColor("#f1f5f9"))
+            if hasattr(self, "setFillAlpha"):
+                self.setFillAlpha(0.04)
+            self.setFont("Helvetica-Bold", 40)
+            self.setFillColor(colors.HexColor("#94a3b8"))
             self.translate(A4[0] / 2.0, A4[1] / 2.0)
             self.rotate(45)
-            self.drawCentredString(0, 0, "CONFIDENTIAL - MEDICAL RECORD")
+            self.drawCentredString(0, 0, "CONFIDENTIAL MEDICAL SUMMARY")
             self.restoreState()
 
         # Running Top Header on Pages > 1
@@ -210,35 +212,48 @@ class PatientReportPDFService:
         # ==========================================
         # 1. CLINIC HEADER & REPORT BANNER
         # ==========================================
-        clinic_name = clinic_info.get("name", "DentalCare Pro Clinic")
-        clinic_phone = clinic_info.get("phone", "+91 99000 11223")
-        clinic_email = clinic_info.get("email", "contact@dentalcarepro.in")
-        clinic_address = clinic_info.get("address", "101 Medical Center, Dental Tower")
+        clinic_name = clinic_info.get("name") or "DentalCare Pro Clinic"
+        clinic_phone = clinic_info.get("phone") or "+91 99000 11223"
+        clinic_email = clinic_info.get("email") or "contact@dentalcarepro.in"
+        clinic_address = clinic_info.get("address") or "101 Medical Center, Dental Tower"
 
-        patient_name = patient_data.get("full_name", "Unknown Patient")
-        patient_number = patient_data.get("patient_number", "P-0000")
-        patient_id = patient_data.get("id", "")
+        patient_name = patient_data.get("full_name") or "Patient"
+        patient_number = patient_data.get("patient_number") or "P-0000"
+        patient_id = patient_data.get("id") or ""
 
         qr_payload = QRCodeService.generate_patient_payload(
-            str(patient_id), str(clinic_info.get("id", "MAIN"))
+            str(patient_id), str(clinic_info.get("id") or "MAIN")
         )
         qr_flowable = QRCodeService.generate_qr_flowable(qr_payload, size=52)
+
+        contact_items = []
+        if clinic_phone and str(clinic_phone).lower() != "none":
+            contact_items.append(f"Tel: {clinic_phone}")
+        if clinic_email and str(clinic_email).lower() != "none":
+            contact_items.append(f"Email: {clinic_email}")
+        contact_str = " &bull; ".join(contact_items)
+
+        addr_str = (
+            f"{clinic_address}<br/>"
+            if clinic_address and str(clinic_address).lower() != "none"
+            else ""
+        )
 
         header_left = [
             Paragraph(f"<b>{clinic_name.upper()}</b>", title_style),
             Paragraph(
-                f"{clinic_address}<br/>Tel: {clinic_phone} &bull; Email: {clinic_email}",
+                f"{addr_str}{contact_str}",
                 meta_style,
             ),
         ]
         header_right = [
             Paragraph(
-                "<font color='#0f766e'><b>PATIENT CLINICAL REPORT</b></font>",
+                "<font color='#0f766e'><b>PATIENT DENTAL REPORT</b></font>",
                 ParagraphStyle("RepDocT", fontName="Helvetica-Bold", fontSize=12, leading=15, alignment=2),
             ),
             Paragraph(
-                f"<b>Report #:</b> {report_number}<br/>"
-                f"<b>Date:</b> {datetime.now(UTC).strftime('%d-%b-%Y %I:%M %p')}",
+                f"<b>Patient:</b> {patient_name}<br/>"
+                f"<b>Report #:</b> {report_number} &bull; <b>Date:</b> {datetime.now(UTC).strftime('%d-%b-%Y')}",
                 ParagraphStyle("RepDocM", fontName="Helvetica", fontSize=8, leading=11, alignment=2, textColor=slate_muted),
             ),
         ]
@@ -266,21 +281,21 @@ class PatientReportPDFService:
         # 2. PERSONAL DETAILS
         # ==========================================
         if PatientReportSectionEnum.PERSONAL_DETAILS in sections:
-            story.extend(make_section_header("1. Patient Demographics & Profile"))
-            p_age = patient_data.get("age", "N/A")
-            p_gender = patient_data.get("gender", "N/A").title().replace("_", " ")
-            p_dob = patient_data.get("date_of_birth", "N/A")
-            p_blood = patient_data.get("blood_group", "—")
-            p_phone = patient_data.get("mobile_number", "—")
-            p_email = patient_data.get("email", "—")
-            p_addr = patient_data.get("address", "—")
-            p_city = patient_data.get("city", "—")
-            p_em_name = patient_data.get("emergency_contact_name", "—")
-            p_em_phone = patient_data.get("emergency_contact_phone", "—")
+            story.extend(make_section_header("1. Patient Information & Profile"))
+            p_age = patient_data.get("age") or "N/A"
+            p_gender = str(patient_data.get("gender") or "N/A").title().replace("_", " ")
+            p_dob = patient_data.get("date_of_birth") or "Not Specified"
+            p_blood = patient_data.get("blood_group") or "Not Specified"
+            p_phone = patient_data.get("mobile_number") or "Not Specified"
+            p_email = patient_data.get("email") or "Not Specified"
+            p_addr = patient_data.get("address") or "Not Specified"
+            p_city = patient_data.get("city") or "Not Specified"
+            p_em_name = patient_data.get("emergency_contact_name") or "Not Specified"
+            p_em_phone = patient_data.get("emergency_contact_phone") or "Not Specified"
 
             demo_data = [
                 [
-                    Paragraph(f"<b>Full Name:</b> {patient_name}", cell_style),
+                    Paragraph(f"<b>Patient Name:</b> {patient_name}", cell_style),
                     Paragraph(f"<b>Patient ID:</b> {patient_number}", cell_style),
                     Paragraph(f"<b>Age / Gender:</b> {p_age} yrs / {p_gender}", cell_style),
                 ],
@@ -297,7 +312,7 @@ class PatientReportPDFService:
                 [
                     Paragraph(f"<b>Emergency Contact:</b> {p_em_name}", cell_style),
                     Paragraph(f"<b>Emergency Phone:</b> {p_em_phone}", cell_style),
-                    Paragraph("<b>Record Status:</b> ACTIVE", cell_bold),
+                    Paragraph("<b>Record Status:</b> <font color='#059669'>ACTIVE</font>", cell_bold),
                 ],
             ]
             demo_tbl = Table(demo_data, colWidths=[174, 174, 175])
@@ -307,8 +322,8 @@ class PatientReportPDFService:
                         ("BACKGROUND", (0, 0), (-1, -1), slate_light),
                         ("BOX", (0, 0), (-1, -1), 0.5, border_color),
                         ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                         ("LEFTPADDING", (0, 0), (-1, -1), 6),
                         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                     ]
@@ -320,18 +335,18 @@ class PatientReportPDFService:
         # 3. MEDICAL HISTORY
         # ==========================================
         if PatientReportSectionEnum.MEDICAL_HISTORY in sections:
-            story.extend(make_section_header("2. Medical History & Health Alerts"))
+            story.extend(make_section_header("2. Medical History & Health Summary"))
             med = patient_data.get("medical_history") or {}
 
             conds = []
             if med.get("diabetes"):
                 conds.append("Diabetes")
             if med.get("hypertension"):
-                conds.append("Hypertension")
+                conds.append("Hypertension (High BP)")
             if med.get("cardiac_disease"):
-                conds.append("Cardiac Disease")
+                conds.append("Cardiac Condition")
             if med.get("thyroid"):
-                conds.append("Thyroid")
+                conds.append("Thyroid Disorder")
             if med.get("asthma"):
                 conds.append("Asthma")
             if med.get("epilepsy"):
@@ -347,43 +362,59 @@ class PatientReportPDFService:
             if med.get("alcohol"):
                 habits.append("Alcohol")
 
-            allergies = med.get("allergies") or "None Reported"
-            curr_meds = med.get("current_medications") or "None"
-            surgeries = med.get("previous_surgeries") or "None"
-            inf_diseases = med.get("infectious_diseases") or "None"
-            notes = med.get("additional_notes") or "None"
+            raw_allergies = med.get("allergies")
+            has_allergies = bool(
+                raw_allergies
+                and str(raw_allergies).strip().lower() not in ("none", "none reported", "nil", "no", "n/a")
+            )
+            allergies = str(raw_allergies) if has_allergies else "No Known Allergies (NKA)"
+            curr_meds = med.get("current_medications") or "None reported"
+            if str(curr_meds).strip().lower() == "none":
+                curr_meds = "None reported"
+            surgeries = med.get("previous_surgeries") or "None reported"
+            if str(surgeries).strip().lower() == "none":
+                surgeries = "None reported"
+            inf_diseases = med.get("infectious_diseases") or "None reported"
+            if str(inf_diseases).strip().lower() == "none":
+                inf_diseases = "None reported"
+            notes = med.get("additional_notes") or "No special precautions required"
+            if str(notes).strip().lower() == "none":
+                notes = "No special precautions required"
+
+            phys_name = med.get("physician_name")
+            phys_contact = med.get("physician_contact")
+            if phys_name and str(phys_name).strip().lower() != "none":
+                phys_line = f"Dr. {phys_name}" + (f" ({phys_contact})" if phys_contact else "") + f" &bull; {notes}"
+            else:
+                phys_line = str(notes)
 
             med_data = [
                 [
-                    Paragraph("<b>Systemic Conditions:</b>", cell_bold),
-                    Paragraph(", ".join(conds) if conds else "No systemic conditions reported", alert_style if conds else cell_style),
-                ],
-                [
-                    Paragraph("<b>Known Allergies:</b>", cell_bold),
-                    Paragraph(allergies, alert_style if allergies != "None Reported" else cell_style),
-                ],
-                [
-                    Paragraph("<b>Current Medications:</b>", cell_bold),
-                    Paragraph(curr_meds, cell_style),
-                ],
-                [
-                    Paragraph("<b>Previous Surgeries:</b>", cell_bold),
-                    Paragraph(surgeries, cell_style),
-                ],
-                [
-                    Paragraph("<b>Social Habits / Tobacco:</b>", cell_bold),
-                    Paragraph(", ".join(habits) if habits else "None", cell_style),
-                ],
-                [
-                    Paragraph("<b>Infectious Diseases:</b>", cell_bold),
-                    Paragraph(inf_diseases, cell_style),
-                ],
-                [
-                    Paragraph("<b>Physician & Clinical Notes:</b>", cell_bold),
+                    Paragraph("<b>Medical Conditions:</b>", cell_bold),
                     Paragraph(
-                        f"Dr. {med.get('physician_name') or '—'} ({med.get('physician_contact') or '—'}) &bull; {notes}",
-                        cell_style,
+                        ", ".join(conds) if conds else "No systemic medical conditions reported",
+                        alert_style if conds else cell_style,
                     ),
+                ],
+                [
+                    Paragraph("<b>Drug / Food Allergies:</b>", cell_bold),
+                    Paragraph(allergies, alert_style if has_allergies else cell_style),
+                ],
+                [
+                    Paragraph("<b>Ongoing Medications:</b>", cell_bold),
+                    Paragraph(str(curr_meds), cell_style),
+                ],
+                [
+                    Paragraph("<b>Past Surgeries:</b>", cell_bold),
+                    Paragraph(str(surgeries), cell_style),
+                ],
+                [
+                    Paragraph("<b>Lifestyle & Habits:</b>", cell_bold),
+                    Paragraph(", ".join(habits) if habits else "None reported", cell_style),
+                ],
+                [
+                    Paragraph("<b>Doctor Remarks & Notes:</b>", cell_bold),
+                    Paragraph(phys_line, cell_style),
                 ],
             ]
             med_tbl = Table(med_data, colWidths=[145, 378])
@@ -393,8 +424,8 @@ class PatientReportPDFService:
                         ("BACKGROUND", (0, 0), (-1, -1), slate_light),
                         ("BOX", (0, 0), (-1, -1), 0.5, border_color),
                         ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                         ("LEFTPADDING", (0, 0), (-1, -1), 6),
                         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                     ]
@@ -406,7 +437,7 @@ class PatientReportPDFService:
         # 4. DENTAL HISTORY
         # ==========================================
         if PatientReportSectionEnum.DENTAL_HISTORY in sections:
-            story.extend(make_section_header("3. Dental History & Oral Hygiene"))
+            story.extend(make_section_header("3. Dental History & Oral Care"))
             dent = patient_data.get("dental_history") or {}
 
             symptoms = []
@@ -415,35 +446,35 @@ class PatientReportPDFService:
             if dent.get("bleeding_gums"):
                 symptoms.append("Bleeding Gums")
             if dent.get("grinding"):
-                symptoms.append("Bruxism / Grinding")
+                symptoms.append("Night Grinding (Bruxism)")
             if dent.get("jaw_pain"):
                 symptoms.append("Jaw Pain")
             if dent.get("tmj_disorder"):
-                symptoms.append("TMJ Disorder")
+                symptoms.append("Jaw Joint (TMJ) Discomfort")
 
             dent_data = [
                 [
-                    Paragraph("<b>Chief Complaint:</b>", cell_bold),
+                    Paragraph("<b>Main Reason for Visit:</b>", cell_bold),
                     Paragraph(dent.get("chief_complaint") or "Routine Dental Examination & Cleaning", cell_bold),
                 ],
                 [
-                    Paragraph("<b>Previous Treatments:</b>", cell_bold),
+                    Paragraph("<b>Previous Dental Work:</b>", cell_bold),
                     Paragraph(dent.get("previous_dental_treatments") or "None reported", cell_style),
                 ],
                 [
-                    Paragraph("<b>Reported Symptoms:</b>", cell_bold),
-                    Paragraph(", ".join(symptoms) if symptoms else "None reported", cell_style),
+                    Paragraph("<b>Current Symptoms:</b>", cell_bold),
+                    Paragraph(", ".join(symptoms) if symptoms else "No active pain or bleeding symptoms reported", cell_style),
                 ],
                 [
-                    Paragraph("<b>Oral Hygiene Habits:</b>", cell_bold),
+                    Paragraph("<b>Daily Oral Care:</b>", cell_bold),
                     Paragraph(
-                        f"Brushing: {dent.get('brushing_frequency') or 'Twice daily'} &bull; Flossing: {'Yes' if dent.get('flossing_habit') else 'No'}",
+                        f"Brushing: {dent.get('brushing_frequency') or 'Twice daily'} &bull; Flossing: {'Yes' if dent.get('flossing_habit') else 'Recommended daily'}",
                         cell_style,
                     ),
                 ],
                 [
-                    Paragraph("<b>Examination Notes:</b>", cell_bold),
-                    Paragraph(dent.get("dental_notes") or "Oral mucosa healthy. Gingiva within normal limits.", cell_style),
+                    Paragraph("<b>Clinical Findings:</b>", cell_bold),
+                    Paragraph(dent.get("dental_notes") or "Gums and oral tissues appear healthy and within normal limits.", cell_style),
                 ],
             ]
             dent_tbl = Table(dent_data, colWidths=[145, 378])
@@ -453,8 +484,8 @@ class PatientReportPDFService:
                         ("BACKGROUND", (0, 0), (-1, -1), slate_light),
                         ("BOX", (0, 0), (-1, -1), 0.5, border_color),
                         ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                         ("LEFTPADDING", (0, 0), (-1, -1), 6),
                         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                     ]
@@ -466,7 +497,7 @@ class PatientReportPDFService:
         # 5. ODONTOGRAM (GRAPHICAL CHART & STATS)
         # ==========================================
         if PatientReportSectionEnum.ODONTOGRAM in sections:
-            story.extend(make_section_header("4. Clinical Odontogram & Dental Charting"))
+            story.extend(make_section_header("4. Tooth Chart (Odontogram) & Dental Status"))
             teeth_map: dict[str, Any] = patient_data.get("teeth") or {}
 
             # Odontogram Arch FDI arrangement
@@ -480,29 +511,47 @@ class PatientReportPDFService:
             man_left = [str(t) for t in range(31, 39)]
             lower_arch = man_right + man_left
 
+            status_label_map = {
+                "HEALTHY": ("Healthy", "#059669"),
+                "NORMAL": ("Healthy", "#059669"),
+                "CARIES": ("Cavity", "#dc2626"),
+                "DECAY": ("Cavity", "#dc2626"),
+                "FILLED": ("Filling", "#2563eb"),
+                "FILLING": ("Filling", "#2563eb"),
+                "RESTORATION": ("Filling", "#2563eb"),
+                "ROOT_CANAL": ("RCT", "#7c3aed"),
+                "RCT": ("RCT", "#7c3aed"),
+                "CROWN": ("Crown", "#d97706"),
+                "MISSING": ("Missing", "#64748b"),
+                "EXTRACTED": ("Missing", "#64748b"),
+                "IMPLANT": ("Implant", "#0284c7"),
+            }
+
             def format_tooth_box(tooth_num: str) -> list[Any]:
                 info = teeth_map.get(tooth_num, {})
-                status = info.get("primary_status", "HEALTHY")
-                color_hex = info.get("color", "#10b981")
+                raw_status = str(info.get("primary_status") or "HEALTHY").upper()
                 if info.get("is_missing"):
-                    status = "MISSING"
-                    color_hex = "#64748b"
+                    raw_status = "MISSING"
                 elif info.get("has_crown"):
-                    status = "CROWN"
-                    color_hex = "#f59e0b"
+                    raw_status = "CROWN"
                 elif info.get("has_root_canal"):
-                    status = "RCT"
-                    color_hex = "#8b5cf6"
+                    raw_status = "ROOT_CANAL"
                 elif info.get("has_implant"):
-                    status = "IMPLANT"
-                    color_hex = "#94a3b8"
+                    raw_status = "IMPLANT"
 
-                stat_short = status[:5].upper()
+                friendly_label, color_hex = status_label_map.get(
+                    raw_status,
+                    (raw_status.replace("_", " ").title()[:7], info.get("color") or "#059669"),
+                )
+
                 return [
-                    Paragraph(f"<b>{tooth_num}</b>", ParagraphStyle("TNum", fontName="Helvetica-Bold", fontSize=7, alignment=1, textColor=slate_dark)),
                     Paragraph(
-                        f"<font color='{color_hex}'><b>{stat_short}</b></font>",
-                        ParagraphStyle("TStat", fontName="Helvetica-Bold", fontSize=5.5, alignment=1),
+                        f"<b>#{tooth_num}</b>",
+                        ParagraphStyle("TNum", fontName="Helvetica-Bold", fontSize=7, leading=8.5, alignment=1, textColor=slate_dark),
+                    ),
+                    Paragraph(
+                        f"<font color='{color_hex}'><b>{friendly_label}</b></font>",
+                        ParagraphStyle("TStat", fontName="Helvetica-Bold", fontSize=5.5, leading=7, alignment=1),
                     ),
                 ]
 
@@ -511,9 +560,9 @@ class PatientReportPDFService:
 
             col_w = 523 / 16.0
             odont_table_data = [
-                [Paragraph("<b>MAXILLARY ARCH (UPPER JAW)</b>", ParagraphStyle("ArchU", fontName="Helvetica-Bold", fontSize=7, alignment=1, textColor=teal_dark))] + [""] * 15,
+                [Paragraph("<b>UPPER JAW TEETH (RIGHT TO LEFT: #18 – #28)</b>", ParagraphStyle("ArchU", fontName="Helvetica-Bold", fontSize=7, alignment=1, textColor=teal_dark))] + [""] * 15,
                 upper_cells,
-                [Paragraph("<b>MANDIBULAR ARCH (LOWER JAW)</b>", ParagraphStyle("ArchL", fontName="Helvetica-Bold", fontSize=7, alignment=1, textColor=teal_dark))] + [""] * 15,
+                [Paragraph("<b>LOWER JAW TEETH (RIGHT TO LEFT: #48 – #38)</b>", ParagraphStyle("ArchL", fontName="Helvetica-Bold", fontSize=7, alignment=1, textColor=teal_dark))] + [""] * 15,
                 lower_cells,
             ]
 
@@ -525,12 +574,16 @@ class PatientReportPDFService:
                         ("SPAN", (0, 2), (15, 2)),
                         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e6fffa")),
                         ("BACKGROUND", (0, 2), (-1, 2), colors.HexColor("#e6fffa")),
+                        ("BACKGROUND", (0, 1), (-1, 1), colors.white),
+                        ("BACKGROUND", (0, 3), (-1, 3), colors.white),
                         ("BOX", (0, 0), (-1, -1), 0.5, border_color),
                         ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
                         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                        ("TOPPADDING", (0, 0), (-1, -1), 2),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 1),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 1),
                     ]
                 )
             )
@@ -546,15 +599,19 @@ class PatientReportPDFService:
             implant_cnt = stats.get("implants", 0)
 
             legend_text = (
-                "<b>Legend:</b> "
-                "<font color='#10b981'>■ Healthy</font> &bull; "
-                "<font color='#ef4444'>■ Caries</font> &bull; "
-                "<font color='#3b82f6'>■ Filling</font> &bull; "
-                "<font color='#8b5cf6'>■ Root Canal</font> &bull; "
-                "<font color='#f59e0b'>■ Crown</font> &bull; "
-                "<font color='#64748b'>■ Missing</font> &bull; "
-                "<font color='#94a3b8'>■ Implant</font> | "
-                f"<b>Findings:</b> Caries: {caries_cnt}, RCT: {rct_cnt}, Crowns: {crown_cnt}, Implants: {implant_cnt}, Missing: {missing_cnt}"
+                "<b>How to read your tooth chart:</b> Each box shows a tooth number and its health condition. "
+                "<font color='#059669'><b>Healthy</b></font> = Sound tooth &bull; "
+                "<font color='#dc2626'><b>Cavity</b></font> = Needs filling ({caries}) &bull; "
+                "<font color='#7c3aed'><b>RCT</b></font> = Root Canal ({rct}) &bull; "
+                "<font color='#d97706'><b>Crown</b></font> = Cap ({crowns}) &bull; "
+                "<font color='#0284c7'><b>Implant</b></font> ({implants}) &bull; "
+                "<font color='#64748b'><b>Missing</b></font> ({missing})".format(
+                    caries=caries_cnt,
+                    rct=rct_cnt,
+                    crowns=crown_cnt,
+                    implants=implant_cnt,
+                    missing=missing_cnt,
+                )
             )
             story.append(Paragraph(legend_text, meta_style))
 
@@ -695,9 +752,9 @@ class PatientReportPDFService:
 
             summary_cards = [
                 [
-                    Paragraph(f"<b>Total Invoiced:</b> ₹{total_billed:,.2f}", cell_bold),
-                    Paragraph(f"<b>Total Paid:</b> ₹{total_paid:,.2f}", ParagraphStyle("TotP", parent=cell_bold, textColor=emerald_color)),
-                    Paragraph(f"<b>Outstanding Due:</b> ₹{total_due:,.2f}", ParagraphStyle("TotD", parent=cell_bold, textColor=rose_color if total_due > 0 else emerald_color)),
+                    Paragraph(f"<b>Total Invoiced:</b> Rs. {total_billed:,.2f}", cell_bold),
+                    Paragraph(f"<b>Total Paid:</b> Rs. {total_paid:,.2f}", ParagraphStyle("TotP", parent=cell_bold, textColor=emerald_color)),
+                    Paragraph(f"<b>Outstanding Due:</b> Rs. {total_due:,.2f}", ParagraphStyle("TotD", parent=cell_bold, textColor=rose_color if total_due > 0 else emerald_color)),
                 ]
             ]
             sum_tbl = Table(summary_cards, colWidths=[174, 174, 175])
@@ -735,10 +792,10 @@ class PatientReportPDFService:
                             Paragraph(inv.get("invoice_number", "INV-0000"), cell_bold),
                             Paragraph(inv.get("date", "—"), cell_style),
                             Paragraph(inv.get("status", "PAID"), cell_style),
-                            Paragraph(f"₹{float(inv.get('tax_amount', 0)):,.2f}", cell_style),
-                            Paragraph(f"₹{float(inv.get('grand_total', 0)):,.2f}", cell_bold),
-                            Paragraph(f"₹{float(inv.get('amount_paid', 0)):,.2f}", cell_style),
-                            Paragraph(f"₹{float(inv.get('balance_due', 0)):,.2f}", cell_bold),
+                            Paragraph(f"Rs. {float(inv.get('tax_amount', 0)):,.2f}", cell_style),
+                            Paragraph(f"Rs. {float(inv.get('grand_total', 0)):,.2f}", cell_bold),
+                            Paragraph(f"Rs. {float(inv.get('amount_paid', 0)):,.2f}", cell_style),
+                            Paragraph(f"Rs. {float(inv.get('balance_due', 0)):,.2f}", cell_bold),
                         ]
                     )
                 inv_table = Table(inv_rows, colWidths=[80, 65, 75, 70, 80, 75, 78])
@@ -774,7 +831,7 @@ class PatientReportPDFService:
                             Paragraph(p.get("date", "—"), cell_style),
                             Paragraph(p.get("method", "UPI"), cell_style),
                             Paragraph(p.get("reference", "—"), cell_style),
-                            Paragraph(f"₹{float(p.get('amount', 0)):,.2f}", cell_bold),
+                            Paragraph(f"Rs. {float(p.get('amount', 0)):,.2f}", cell_bold),
                         ]
                     )
                 pay_table = Table(pay_rows, colWidths=[95, 80, 95, 145, 108])

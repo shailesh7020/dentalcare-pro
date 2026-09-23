@@ -123,17 +123,22 @@ export function BookingModal({
     queryKey: ["patient-search-booking", patientSearch],
     queryFn: async () => {
       if (!patientSearch.trim()) return [];
-      const res = await api.get("/patients", { params: { search: patientSearch.trim(), limit: 5 } });
-      return res.data;
+      const res = await api.get<{ items: PatientOption[] } | PatientOption[]>("/patients", {
+        params: { search: patientSearch.trim(), limit: 10 },
+      });
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.items)) return data.items;
+      return [];
     },
-    enabled: isOpen && patientSearch.trim().length > 1 && !effectivePatient,
+    enabled: isOpen && patientSearch.trim().length >= 2 && !effectivePatient,
   });
 
   // Mutation
   const bookMutation = useMutation({
     mutationFn: async () => {
       setConflictError(null);
-      if (!effectivePatient) throw new Error("Please select a patient.");
+      if (!effectivePatient) throw new Error("Please search and select a patient from the dropdown list above.");
       if (!effectiveDentistId) throw new Error("Please select a dentist.");
       if (!effectiveChairId) throw new Error("Please select a dental chair.");
 
@@ -168,8 +173,12 @@ export function BookingModal({
       if (onSuccess) onSuccess();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string } }; message?: string };
-      const msg = axiosErr.response?.data?.detail || axiosErr.message || "Failed to book appointment.";
+      const axiosErr = err as { response?: { data?: { message?: string; detail?: string } }; message?: string };
+      const msg =
+        axiosErr.response?.data?.message ||
+        axiosErr.response?.data?.detail ||
+        axiosErr.message ||
+        "Failed to book appointment.";
       setConflictError(msg);
     },
   });
@@ -190,17 +199,27 @@ export function BookingModal({
           <div className="mt-4 p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3">
             <AlertTriangle className="text-rose-600 shrink-0 mt-0.5" size={16} />
             <div className="flex-1">
-              <strong className="font-semibold block mb-1">Scheduling Conflict Detected</strong>
+              <strong className="font-semibold block mb-1">
+                {conflictError.toLowerCase().includes("conflict") ||
+                conflictError.toLowerCase().includes("overlap") ||
+                conflictError.toLowerCase().includes("already booked")
+                  ? "Scheduling Conflict Detected"
+                  : "Attention Required"}
+              </strong>
               <p>{conflictError}</p>
-              <label className="mt-3 flex items-center gap-2 text-rose-900 font-medium cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isEmergencyOverride}
-                  onChange={(e) => setIsEmergencyOverride(e.target.checked)}
-                  className="rounded text-rose-600 focus:ring-rose-500"
-                />
-                Override with Emergency Admin Authorization
-              </label>
+              {(conflictError.toLowerCase().includes("conflict") ||
+                conflictError.toLowerCase().includes("overlap") ||
+                conflictError.toLowerCase().includes("already booked")) && (
+                <label className="mt-3 flex items-center gap-2 text-rose-900 font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isEmergencyOverride}
+                    onChange={(e) => setIsEmergencyOverride(e.target.checked)}
+                    className="rounded text-rose-600 focus:ring-rose-500"
+                  />
+                  Override with Emergency Admin Authorization
+                </label>
+              )}
             </div>
           </div>
         )}
@@ -259,6 +278,11 @@ export function BookingModal({
                     className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                   />
                 </div>
+                {patientSearchQuery.isFetching && (
+                  <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl p-2.5 text-center text-xs text-teal-700 font-medium animate-pulse">
+                    Searching patients...
+                  </div>
+                )}
                 {patientSearchQuery.data && patientSearchQuery.data.length > 0 && (
                   <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl max-h-56 overflow-y-auto">
                     {patientSearchQuery.data.map((p) => {
@@ -300,6 +324,11 @@ export function BookingModal({
                         </button>
                       );
                     })}
+                  </div>
+                )}
+                {patientSearch.trim().length >= 2 && !patientSearchQuery.isFetching && (!patientSearchQuery.data || patientSearchQuery.data.length === 0) && (
+                  <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl p-3 text-center text-xs text-slate-500">
+                    No registered patient found matching &quot;{patientSearch}&quot;
                   </div>
                 )}
               </div>

@@ -174,7 +174,7 @@ class ClinicalDocumentPDFService:
                     Paragraph(str(p.get("tooth", "-")), cell_bold),
                     Paragraph(f"<b>{p.get('name', '')}</b><br/>{p.get('description', '')}", cell_style),
                     Paragraph(str(p.get("visits", 1)), cell_style),
-                    Paragraph(f"₹{fee:,.2f}", cell_bold),
+                    Paragraph(f"Rs. {fee:,.2f}", cell_bold),
                 ]
             )
 
@@ -185,7 +185,7 @@ class ClinicalDocumentPDFService:
                 Paragraph("", cell_style),
                 Paragraph("<b>Total Estimated Treatment Cost</b>", cell_bold),
                 Paragraph("", cell_style),
-                Paragraph(f"<b>₹{total_estimated:,.2f}</b>", ParagraphStyle("TotVal", fontName="Helvetica-Bold", fontSize=9, textColor=primary_color)),
+                Paragraph(f"<b>Rs. {total_estimated:,.2f}</b>", ParagraphStyle("TotVal", fontName="Helvetica-Bold", fontSize=9, textColor=primary_color)),
             ]
         )
 

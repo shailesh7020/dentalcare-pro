@@ -16,7 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.database.session import get_db
-from app.dependencies.auth import current_user, require_roles
+from app.dependencies.auth import (
+    current_user,
+    current_user_flexible,
+    require_roles,
+    require_roles_flexible,
+)
 from app.models import BloodGroup, Gender, Patient, Role, User
 from app.schemas.patient import (
     DentalHistoryInput,
@@ -70,6 +75,58 @@ async def detail_patient(service: PatientService, patient: Patient) -> PatientDe
         occupation=patient.occupation,
         medical_history=MedicalHistoryInput.model_validate(medical) if medical else None,
         dental_history=DentalHistoryInput.model_validate(dental) if dental else None,
+    )
+
+
+@router.get(
+    "/whatsapp/status",
+    summary="Get Clinic WhatsApp Gateway connection status and QR code",
+)
+async def whatsapp_gateway_status(
+    actor: User = Depends(current_user),
+) -> dict:
+    from app.services.notifications.providers.whatsapp import WhatsAppNotificationProvider
+
+    return await WhatsAppNotificationProvider.get_gateway_status()
+
+
+@router.post(
+    "/whatsapp/pairing-code",
+    summary="Request an 8-digit WhatsApp pairing code for clinic phone number",
+)
+async def whatsapp_gateway_pairing_code(
+    payload: dict,
+    actor: User = Depends(current_user),
+) -> dict:
+    from app.services.notifications.providers.whatsapp import WhatsAppNotificationProvider
+
+    return await WhatsAppNotificationProvider.request_pairing_code(str(payload.get("phone") or ""))
+
+
+@router.post(
+    "/whatsapp/send-pdf",
+    summary="Directly send any PDF document (invoice, receipt, report) to a patient's WhatsApp number",
+)
+async def whatsapp_gateway_send_pdf(
+    payload: dict,
+    actor: User = Depends(current_user),
+) -> dict:
+    import base64
+    from app.services.notifications.providers.whatsapp import WhatsAppNotificationProvider
+
+    phone = str(payload.get("phone") or "").strip()
+    filename = str(payload.get("filename") or "Document.pdf").strip()
+    caption = str(payload.get("caption") or "").strip()
+    pdf_b64 = str(payload.get("pdf_base64") or "").strip()
+    if not phone or not pdf_b64:
+        raise HTTPException(status_code=400, detail="phone and pdf_base64 are required")
+
+    pdf_bytes = base64.b64decode(pdf_b64)
+    return await WhatsAppNotificationProvider.send_document(
+        recipient=phone,
+        filename=filename,
+        caption=caption,
+        pdf_bytes=pdf_bytes,
     )
 
 
@@ -282,7 +339,7 @@ async def upload_document(
 async def download_document(
     patient_id: UUID,
     document_id: UUID,
-    actor: User = Depends(current_user),
+    actor: User = Depends(current_user_flexible),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     service = PatientService(db, actor)
@@ -350,7 +407,7 @@ async def download_patient_report_endpoint(
     patient_id: UUID,
     report_number: str | None = Query(None),
     watermark: bool = Query(False),
-    actor: User = Depends(require_roles(*WRITE_ROLES)),
+    actor: User = Depends(require_roles_flexible(*WRITE_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     service = PatientService(db, actor)

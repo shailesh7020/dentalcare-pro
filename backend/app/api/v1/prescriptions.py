@@ -378,6 +378,7 @@ async def download_prescription_pdf(
     actor: User = Depends(require_roles(*ALL_STAFF)),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
+    import re
     if actor.clinic_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Clinic context required."
@@ -386,7 +387,8 @@ async def download_prescription_pdf(
     rx = await service.get_prescription(actor.clinic_id, prescription_id)
 
     pdf_bytes = PrescriptionPDFService.generate_pdf(rx)
-    filename = f"Prescription-{rx.prescription_number}.pdf"
+    patient_slug = re.sub(r"[^A-Za-z0-9]+", "_", (rx.patient_name or "Patient").strip()).strip("_").upper()
+    filename = f"{patient_slug}_Prescription_{rx.prescription_number}.pdf"
 
     return Response(
         content=pdf_bytes,
@@ -396,3 +398,69 @@ async def download_prescription_pdf(
             "Cache-Control": "no-cache",
         },
     )
+
+
+@router.post(
+    "/{prescription_id}/send-whatsapp",
+    summary="Directly send prescription PDF to patient's WhatsApp",
+    description="Generates the patient-named prescription PDF and delivers it directly to the patient's WhatsApp number.",
+)
+async def send_prescription_whatsapp(
+    prescription_id: UUID,
+    payload: dict | None = None,
+    actor: User = Depends(require_roles(*ALL_STAFF)),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    import re
+    from sqlalchemy import select
+    from app.models.patient import Patient
+    from app.services.notifications.providers.whatsapp import WhatsAppNotificationProvider
+
+    if actor.clinic_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Clinic context required."
+        )
+    service = PrescriptionService(db)
+    rx = await service.get_prescription(actor.clinic_id, prescription_id)
+
+    phone = (payload or {}).get("phone")
+    if not phone:
+        patient_obj = (
+            await db.execute(select(Patient).where(Patient.id == rx.patient_id))
+        ).scalar_one_or_none()
+        phone = patient_obj.mobile_number if patient_obj else None
+
+    if not phone:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Patient does not have a mobile number on file.",
+        )
+
+    pdf_bytes = PrescriptionPDFService.generate_pdf(rx)
+    patient_slug = re.sub(r"[^A-Za-z0-9]+", "_", (rx.patient_name or "Patient").strip()).strip("_").upper()
+    filename = f"{patient_slug}_Prescription_{rx.prescription_number}.pdf"
+
+    meds_summary = "\n".join(
+        f"• *{it.medicine_name}* ({it.strength}) — {it.dosage}, {it.frequency} for {it.duration} ({it.food_instructions or 'After food'})"
+        for it in rx.items
+    )
+    caption = (
+        f"Hello *{rx.patient_name or 'Patient'}*,\n\n"
+        f"Please find attached your official dental prescription (*#{rx.prescription_number}*) from *{rx.clinic_name or 'DentalCare Pro'}*.\n\n"
+        f"*Prescribed By:* Dr. {rx.dentist_name or 'Dentist'}\n"
+        f"*Diagnosis:* {rx.diagnosis}\n\n"
+        f"*Medications:*\n{meds_summary}\n\n"
+        f"Wishing you a speedy recovery!"
+    )
+
+    result = await WhatsAppNotificationProvider.send_document(
+        recipient=str(phone),
+        filename=filename,
+        caption=caption,
+        pdf_bytes=pdf_bytes,
+    )
+    return {
+        **result,
+        "filename": filename,
+        "recipient": str(phone),
+    }

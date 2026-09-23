@@ -234,8 +234,8 @@ class AppointmentService:
         )
 
         await self.db.commit()
-        await self.db.refresh(apt)
-        return self.repo.to_detail_model(apt)
+        refreshed = await self.repo.get(clinic_id, apt.id)
+        return self.repo.to_detail_model(refreshed or apt)
 
     async def get(self, clinic_id: UUID, appointment_id: UUID) -> AppointmentDetail:
         apt = await self.repo.get(clinic_id, appointment_id)
@@ -329,8 +329,8 @@ class AppointmentService:
         )
 
         await self.db.commit()
-        await self.db.refresh(updated_apt)
-        return self.repo.to_detail_model(updated_apt)
+        refreshed = await self.repo.get(clinic_id, updated_apt.id)
+        return self.repo.to_detail_model(refreshed or updated_apt)
 
     async def confirm(self, clinic_id: UUID, appointment_id: UUID, actor: User) -> AppointmentDetail:
         apt = await self.repo.get(clinic_id, appointment_id)
@@ -364,8 +364,8 @@ class AppointmentService:
         )
         notification_service.dispatch_appointment_event(NotificationType.CONFIRMATION, updated)
         await self.db.commit()
-        await self.db.refresh(updated)
-        return self.repo.to_detail_model(updated)
+        refreshed = await self.repo.get(clinic_id, updated.id)
+        return self.repo.to_detail_model(refreshed or updated)
 
     async def checkin(self, clinic_id: UUID, appointment_id: UUID, actor: User) -> AppointmentDetail:
         apt = await self.repo.get(clinic_id, appointment_id)
@@ -398,8 +398,8 @@ class AppointmentService:
             )
         )
         await self.db.commit()
-        await self.db.refresh(updated)
-        return self.repo.to_detail_model(updated)
+        refreshed = await self.repo.get(clinic_id, updated.id)
+        return self.repo.to_detail_model(refreshed or updated)
 
     async def start_treatment(
         self, clinic_id: UUID, appointment_id: UUID, actor: User
@@ -429,8 +429,8 @@ class AppointmentService:
             )
         )
         await self.db.commit()
-        await self.db.refresh(updated)
-        return self.repo.to_detail_model(updated)
+        refreshed = await self.repo.get(clinic_id, updated.id)
+        return self.repo.to_detail_model(refreshed or updated)
 
     async def complete(
         self, clinic_id: UUID, appointment_id: UUID, actor: User
@@ -473,8 +473,8 @@ class AppointmentService:
         notification_service.dispatch_appointment_event(NotificationType.FOLLOW_UP, updated)
 
         await self.db.commit()
-        await self.db.refresh(updated)
-        return self.repo.to_detail_model(updated)
+        refreshed = await self.repo.get(clinic_id, updated.id)
+        return self.repo.to_detail_model(refreshed or updated)
 
     async def cancel(
         self, clinic_id: UUID, appointment_id: UUID, payload: AppointmentCancel, actor: User
@@ -525,8 +525,8 @@ class AppointmentService:
         )
 
         await self.db.commit()
-        await self.db.refresh(updated)
-        return self.repo.to_detail_model(updated)
+        refreshed = await self.repo.get(clinic_id, updated.id)
+        return self.repo.to_detail_model(refreshed or updated)
 
     async def reschedule(
         self,
@@ -613,8 +613,8 @@ class AppointmentService:
         )
 
         await self.db.commit()
-        await self.db.refresh(updated)
-        return self.repo.to_detail_model(updated)
+        refreshed = await self.repo.get(clinic_id, updated.id)
+        return self.repo.to_detail_model(refreshed or updated)
 
     async def delete(self, clinic_id: UUID, appointment_id: UUID, actor: User) -> None:
         apt = await self.repo.get(clinic_id, appointment_id)
