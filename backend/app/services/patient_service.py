@@ -131,13 +131,58 @@ class PatientService:
                 )
         return warnings
 
+    async def _generate_patient_number(self) -> str:
+        from sqlalchemy import func
+        clinic = await self.db.get(Clinic, self.clinic_id)
+        prefix = "PAT"
+        sep = "-"
+        include_year = False
+        padding = 5
+        start_num = 1
+
+        if clinic and clinic.tax_configuration:
+            try:
+                cfg = json.loads(clinic.tax_configuration)
+                fmt = cfg.get("patient_number_format") or {}
+                if fmt.get("prefix"):
+                    prefix = str(fmt["prefix"]).strip().upper()
+                if fmt.get("separator") is not None:
+                    sep = str(fmt["separator"])
+                if fmt.get("include_year") is not None:
+                    include_year = bool(fmt["include_year"])
+                if fmt.get("padding_digits"):
+                    padding = max(3, min(8, int(fmt["padding_digits"])))
+                if fmt.get("start_number"):
+                    start_num = max(1, int(fmt["start_number"]))
+            except (json.JSONDecodeError, ValueError, TypeError):
+                pass
+
+        total_count = (
+            await self.db.scalar(
+                select(func.count()).select_from(Patient).where(Patient.clinic_id == self.clinic_id)
+            )
+            or 0
+        )
+        seq = max(start_num, total_count + start_num)
+        seq_str = str(seq).zfill(padding)
+        year_part = f"{datetime.now(UTC).year}{sep}" if include_year else ""
+        candidate = f"{prefix}{sep}{year_part}{seq_str}" if prefix else f"{year_part}{seq_str}"
+
+        existing = await self.db.scalar(
+            select(Patient.id).where(Patient.patient_number == candidate)
+        )
+        if existing:
+            candidate = f"{candidate}-{uuid4().hex[:4].upper()}"
+        return candidate
+
     async def create(self, payload: PatientInput) -> tuple[Patient, list[DuplicateWarning]]:
         warnings = await self.duplicates(payload)
         data = payload.model_dump(exclude={"medical_history", "dental_history"}, exclude_none=True)
+        generated_number = await self._generate_patient_number()
         patient = Patient(
             id=uuid4(),
             clinic_id=self.clinic_id,
-            patient_number=f"P-{self.clinic_id.hex[:6].upper()}-{uuid4().hex[:8].upper()}",
+            patient_number=generated_number,
             **data,
             created_by=self.actor.id,
             updated_by=self.actor.id,

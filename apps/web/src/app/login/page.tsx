@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -9,6 +9,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("Password123!");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/setup/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && data.is_initialized === false) {
+          router.replace("/setup");
+        }
+      })
+      .catch(() => null);
+  }, [router]);
 
   async function performLogin(loginEmail: string, loginPassword: string) {
     setPending(true);
@@ -47,11 +58,25 @@ export default function LoginPage() {
         <button
           type="button"
           className="new-button"
-          style={{ marginBottom: "12px", background: "#0d9488", fontWeight: 700 }}
+          style={{ marginBottom: "8px", background: "#0d9488", fontWeight: 700 }}
           disabled={pending}
           onClick={() => performLogin("admin@dentalcare.com", "Password123!")}
         >
           {pending ? "Opening Clinic Workspace..." : "1-Click Doctor Sign In →"}
+        </button>
+        <button
+          type="button"
+          className="new-button"
+          style={{
+            marginBottom: "12px",
+            background: "#f1f5f9",
+            color: "#0f172a",
+            border: "1px solid #cbd5e1",
+            fontWeight: 600,
+          }}
+          onClick={() => router.push("/setup")}
+        >
+          🛠 First Launch Clinic Setup Wizard
         </button>
         <label>
           Email

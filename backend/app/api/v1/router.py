@@ -27,6 +27,7 @@ from app.api.v1 import (
     portal,
     prescriptions,
     remote,
+    setup_wizard,
     signatures,
     treatments,
     updates,
@@ -35,6 +36,7 @@ from app.api.v1 import (
 
 api_router = APIRouter()
 api_router.include_router(health.router)
+api_router.include_router(setup_wizard.router)
 api_router.include_router(auth.router)
 api_router.include_router(clinics.router)
 api_router.include_router(patients.router)

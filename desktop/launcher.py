@@ -381,11 +381,21 @@ def main():
     supervisor = BackendSupervisor(port=api_port, web_port=3000)
     supervisor.start()
 
-    wizard_html = BASE_DIR / "wizard.html"
+    is_clinic_initialized = False
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{api_port}/api/v1/setup/status",
+            headers={"User-Agent": "DentalCarePro-Shell"},
+        )
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
+            status_data = json.loads(resp.read().decode("utf-8"))
+            is_clinic_initialized = bool(status_data.get("is_initialized", False))
+    except Exception:
+        is_clinic_initialized = not is_first_run
 
-    if is_first_run and wizard_html.exists():
-        initial_url = wizard_html.as_uri()
-        log(f"First-launch detected. Loading Setup Wizard: {initial_url}")
+    if not is_clinic_initialized:
+        initial_url = "http://localhost:3000/setup"
+        log(f"First-launch detected. Loading 14-Step Clinic Setup Wizard: {initial_url}")
     else:
         initial_url = "http://localhost:3000"
         log(f"Loading DentalCare Pro clinical workspace: {initial_url}")

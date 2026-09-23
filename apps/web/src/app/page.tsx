@@ -88,6 +88,18 @@ const TODAY_APPOINTMENTS: AppointmentItem[] = [
 export default function HomePage() {
   const session = useAuthSession();
   const [filterChair, setFilterChair] = useState<string>("ALL");
+  const [clinicTitle, setClinicTitle] = useState<string>("DentalCare Pro Clinic");
+  const [doctorTitle, setDoctorTitle] = useState<string>("Doctor");
+
+  React.useEffect(() => {
+    fetch("/api/setup/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.clinic_name) setClinicTitle(data.clinic_name);
+        if (data?.config?.doctor_name) setDoctorTitle(data.config.doctor_name);
+      })
+      .catch(() => null);
+  }, []);
 
   const filteredAppointments = useMemo(() => {
     if (filterChair === "ALL") return TODAY_APPOINTMENTS;
@@ -117,16 +129,16 @@ export default function HomePage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-900/60">
-                Tuesday, 2 September 2026
+                {clinicTitle}
               </span>
               <span className="text-xs text-slate-400 dark:text-slate-500">•</span>
               <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                Clinic Open (3 Active Chairs)
+                Clinic Open (Active Operatories)
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Good morning, Dr. Shah
+              Welcome, {doctorTitle}
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               Here is what is scheduled for your practice today across all operatory chairs.
@@ -134,6 +146,11 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link href="/setup">
+              <Button variant="outline" size="sm" leftIcon={<Building2 className="w-4 h-4" />}>
+                Clinic Setup Wizard
+              </Button>
+            </Link>
             <Link href="/appointments?tab=calendar">
               <Button variant="outline" size="sm" leftIcon={<Calendar className="w-4 h-4" />}>
                 Calendar View
