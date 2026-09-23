@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setAccessToken } from "@/lib/auth/token-store";
 
 interface DayHours {
   day: string;
@@ -344,10 +343,7 @@ export default function FirstLaunchSetupWizardPage() {
         const errData = await res.json().catch(() => null);
         throw new Error(errData?.detail || "Failed to complete clinic setup");
       }
-      const result = await res.json();
-      if (result.access_token) {
-        setAccessToken(result.access_token);
-      }
+      await res.json();
       router.replace("/");
       router.refresh();
     } catch (err: unknown) {
