@@ -78,7 +78,8 @@ class InMemoryDbService:
         elif "teeth" in text:
             matching = [item for item in self.items if isinstance(item, Tooth)]
         elif "tooth_history" in text:
-            matching = [item for item in self.items if hasattr(item, "action")]
+            from app.models.odontogram import ToothHistory
+            matching = [item for item in self.items if isinstance(item, ToothHistory)]
 
         return SimpleNamespace(
             scalars=lambda: SimpleNamespace(
@@ -221,3 +222,129 @@ async def test_odontogram_service_surface_update_and_procedures():
     )
     assert proc_res.primary_status == ToothCondition.FILLING.value
     assert proc_res.color == COLOR_STANDARDS[ToothCondition.FILLING]
+
+
+@pytest.mark.asyncio
+async def test_odontogram_service_conditions_procedures_and_sync():
+    from app.schemas.odontogram import ToothConditionCreate
+
+    clinic_id, patient, dentist = setup_service_fixtures()
+    db = InMemoryDbService(patient)
+    service = OdontogramService(db)  # type: ignore[arg-type]
+
+    chart = await service.get_patient_odontogram(clinic_id, patient.id, "ADULT", dentist.id)
+    by_num = {t.tooth_number: t for t in chart.teeth}
+
+    t12 = await db.get(Tooth, by_num["12"].id)
+    t13 = await db.get(Tooth, by_num["13"].id)
+    t14 = await db.get(Tooth, by_num["14"].id)
+    t15 = await db.get(Tooth, by_num["15"].id)
+    t21 = await db.get(Tooth, by_num["21"].id)
+    assert t12 and t13 and t14 and t15 and t21
+
+    # 1. add_condition with surfaces & notes
+    cond_res = await service.add_condition(
+        clinic_id,
+        t12.id,
+        ToothConditionCreate(
+            condition="CARIES",
+            surfaces=[ToothSurfaceEnum.MESIAL, ToothSurfaceEnum.DISTAL],
+            notes="Deep interproximal caries",
+        ),
+        dentist,
+    )
+    assert cond_res.primary_status == "CARIES"
+
+    # 2. update_tooth flags (is_missing, is_impacted, has_bridge, mobility_grade, notes, color)
+    await service.update_tooth(
+        clinic_id,
+        t13.id,
+        ToothUpdate(
+            is_missing=True,
+            is_impacted=True,
+            has_bridge=True,
+            mobility_grade=2,
+            notes="Bridge abutment",
+            color="#94A3B8",
+        ),
+        dentist,
+    )
+    assert t13.is_missing is True
+    assert t13.has_bridge is True
+
+    # 3. add_procedure: ROOT_CANAL, CROWN, BRIDGE, SEALANT, EXTRACTION, IMPLANT
+    await service.add_procedure(
+        clinic_id,
+        t14.id,
+        ToothProcedureCreate(procedure_name="RCT", procedure_type="ROOT_CANAL", cost=4500.0),
+        dentist,
+    )
+    assert t14.has_root_canal is True
+
+    await service.add_procedure(
+        clinic_id,
+        t14.id,
+        ToothProcedureCreate(procedure_name="Zirconia Crown", procedure_type="CROWN", cost=8000.0),
+        dentist,
+    )
+    assert t14.has_crown is True
+
+    await service.add_procedure(
+        clinic_id,
+        t15.id,
+        ToothProcedureCreate(procedure_name="Pit Sealant", procedure_type="SEALANT", cost=800.0),
+        dentist,
+    )
+    assert t15.primary_status == ToothCondition.SEALANT.value
+
+    await service.add_procedure(
+        clinic_id,
+        t15.id,
+        ToothProcedureCreate(procedure_name="3-Unit Bridge", procedure_type="BRIDGE", cost=12000.0),
+        dentist,
+    )
+    assert t15.has_bridge is True
+
+    await service.add_procedure(
+        clinic_id,
+        t21.id,
+        ToothProcedureCreate(procedure_name="Surgical Extraction", procedure_type="EXTRACTION", cost=2000.0),
+        dentist,
+    )
+    assert t21.is_extracted is True
+
+    await service.add_procedure(
+        clinic_id,
+        t21.id,
+        ToothProcedureCreate(procedure_name="Titanium Implant", procedure_type="IMPLANT", cost=25000.0),
+        dentist,
+    )
+    assert t21.has_implant is True
+
+    # 4. sync_treatment_procedure for all procedure types
+    trt_id = uuid4()
+    apt_id = uuid4()
+    for num, p_name in [
+        ("22", "Composite Filling"),
+        ("23", "Root Canal Treatment"),
+        ("24", "Porcelain Crown"),
+        ("25", "Fixed Bridge"),
+        ("26", "Simple Extraction"),
+        ("26", "Endosseous Implant"),
+    ]:
+        await service.sync_treatment_procedure(
+            clinic_id=clinic_id,
+            patient_id=patient.id,
+            tooth_number_raw=num,
+            procedure_name=p_name,
+            procedure_id=uuid4(),
+            treatment_id=trt_id,
+            appointment_id=apt_id,
+            actor=dentist,
+        )
+
+    # 5. History queries
+    p_hist = await service.get_patient_history(clinic_id, patient.id)
+    t_hist = await service.get_tooth_history(clinic_id, t14.id)
+    assert isinstance(p_hist, list)
+    assert isinstance(t_hist, list)

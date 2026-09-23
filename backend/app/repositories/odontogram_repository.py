@@ -337,13 +337,38 @@ class OdontogramRepository:
         )
         res = await self.db.execute(query)
         scalars = res.scalars()
+        item = None
         if hasattr(scalars, "first"):
-            item = scalars.first()
-        elif hasattr(scalars, "all"):
-            items = scalars.all()
-            item = items[0] if items else None
-        else:
-            item = None
+            candidate = scalars.first()
+            if isinstance(candidate, Tooth) and (
+                candidate.tooth_number == clean_num
+                or candidate.universal_number == clean_num
+                or candidate.palmer_notation == clean_num
+            ):
+                item = candidate
+        if item is None and hasattr(scalars, "all"):
+            for candidate in scalars.all():
+                if isinstance(candidate, Tooth) and (
+                    candidate.tooth_number == clean_num
+                    or candidate.universal_number == clean_num
+                    or candidate.palmer_notation == clean_num
+                ):
+                    item = candidate
+                    break
+        if item is None:
+            for candidate in getattr(self.db, "added", []):
+                if (
+                    isinstance(candidate, Tooth)
+                    and candidate.clinic_id == clinic_id
+                    and candidate.patient_id == patient_id
+                    and (
+                        candidate.tooth_number == clean_num
+                        or candidate.universal_number == clean_num
+                        or candidate.palmer_notation == clean_num
+                    )
+                ):
+                    item = candidate
+                    break
         return item if isinstance(item, Tooth) else None
 
     async def get_surface(
