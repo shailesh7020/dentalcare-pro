@@ -5,11 +5,24 @@ export type MedicineForm =
   | "CAPSULE"
   | "SYRUP"
   | "MOUTHWASH"
+  | "DENTAL_PASTE"
   | "GEL"
+  | "CREAM"
   | "INJECTION"
-  | "DROPS";
+  | "DROPS"
+  | "POWDER"
+  | "OTHER";
 
-export type DosageFrequency = "OD" | "BD" | "TDS" | "QID" | "SOS" | "STAT";
+export type DosageFrequency =
+  | "OD"
+  | "BD"
+  | "TDS"
+  | "QID"
+  | "SOS"
+  | "STAT"
+  | "WEEKLY"
+  | "MONTHLY"
+  | "CUSTOM";
 
 export type TemplateCategory =
   | "EXTRACTION"
