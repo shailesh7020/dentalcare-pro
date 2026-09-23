@@ -58,6 +58,10 @@ def assemble():
         shutil.copy2(app_icon_src, runtime_dir / "app_icon.ico")
         shutil.copy2(app_icon_src, resources_dir / "app_icon.ico")
 
+    launcher_bat = ROOT_DIR / "start_website.bat"
+    if launcher_bat.exists():
+        shutil.copy2(launcher_bat, GIFT_DIR / "Start DentalCare Pro.bat")
+
     # 3. Copy Runtime Binaries
     print("\n[+] Deploying Runtime Binaries...")
     shutil.copy2(ROOT_DIR / "dist" / "DentalCarePro.exe", runtime_dir / "DentalCarePro.exe")

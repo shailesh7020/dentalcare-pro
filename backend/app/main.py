@@ -65,5 +65,17 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
+from fastapi.responses import RedirectResponse
+
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(metrics.router)
+
+
+@app.get("/api/health", include_in_schema=False)
+async def legacy_health_check() -> dict[str, str]:
+    return {"status": "ok", "service": "DentalCare Pro API"}
+
+
+@app.get("/", include_in_schema=False)
+async def root_redirect() -> RedirectResponse:
+    return RedirectResponse(url="http://localhost:3000")

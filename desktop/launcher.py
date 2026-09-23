@@ -57,25 +57,50 @@ def log_crash(msg: str):
 
 
 class BackendSupervisor:
-    """Manages the lifecycle of DentalCarePro-API.exe."""
+    """Manages the lifecycle of DentalCarePro-API.exe, WhatsApp Gateway, and Web UI."""
 
-    def __init__(self, port: int = 8000):
+    def __init__(self, port: int = 8000, web_port: int = 3000):
         self.port = port
+        self.web_port = web_port
         self.proc = None
+        self.web_proc = None
+        self.wa_proc = None
         self.restart_count = 0
         self.max_restarts = 3
 
     def is_healthy(self) -> bool:
-        url = f"http://127.0.0.1:{self.port}/api/health"
+        for path in ("/api/v1/health/live", "/api/health"):
+            url = f"http://127.0.0.1:{self.port}{path}"
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "DentalCarePro-Shell"})
+                with urllib.request.urlopen(req, timeout=1.5) as resp:
+                    if resp.status == 200:
+                        return True
+            except Exception:
+                continue
+        return False
+
+    def is_web_healthy(self) -> bool:
+        url = f"http://127.0.0.1:{self.web_port}"
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "DentalCarePro-Shell"})
             with urllib.request.urlopen(req, timeout=1.5) as resp:
-                return resp.status == 200
+                return resp.status in (200, 302, 307, 308)
         except Exception:
             return False
 
+    def find_project_root(self) -> Path:
+        candidates = [
+            Path(r"e:\dentalcare-pro"),
+            ROOT_DIR,
+            BASE_DIR.parent.parent,
+        ]
+        for c in candidates:
+            if (c / "apps" / "web").exists():
+                return c
+        return ROOT_DIR
+
     def find_api_binary(self) -> Path:
-        # Search adjacent directories (production bundle) and build directories
         candidates = [
             BASE_DIR / "backend" / "DentalCarePro-API.exe",
             BASE_DIR / "DentalCarePro-API.exe",
@@ -90,11 +115,6 @@ class BackendSupervisor:
         return None
 
     def start(self):
-        if self.is_healthy():
-            log(f"DentalCare Pro API is already running and healthy on port {self.port}.")
-            return
-
-        exe_path = self.find_api_binary()
         startupinfo = None
         creationflags = 0
         if sys.platform == "win32":
@@ -103,35 +123,67 @@ class BackendSupervisor:
             startupinfo.wShowWindow = 0  # SW_HIDE
             creationflags = subprocess.CREATE_NO_WINDOW
 
-        if exe_path:
+        proj_root = self.find_project_root()
+
+        # 1. Ensure WhatsApp Gateway is running on port 4050
+        wa_script = proj_root / "scripts" / "whatsapp-gateway.mjs"
+        if wa_script.exists():
+            try:
+                self.wa_proc = subprocess.Popen(
+                    ["node", str(wa_script)],
+                    cwd=str(proj_root),
+                    startupinfo=startupinfo,
+                    creationflags=creationflags,
+                )
+            except Exception as e:
+                log(f"WhatsApp gateway start note: {e}")
+
+        # 2. Ensure Web Frontend (Next.js on port 3000) is running
+        if not self.is_web_healthy() and (proj_root / "apps" / "web").exists():
+            try:
+                self.web_proc = subprocess.Popen(
+                    ["cmd.exe", "/c", f"npx next dev -H 0.0.0.0 -p {self.web_port}"],
+                    cwd=str(proj_root / "apps" / "web"),
+                    startupinfo=startupinfo,
+                    creationflags=creationflags,
+                )
+            except Exception as e:
+                log(f"Web UI start note: {e}")
+
+        # 3. Ensure Backend API (port 8000) is running
+        if self.is_healthy():
+            log(f"DentalCare Pro API is already running and healthy on port {self.port}.")
+            return
+
+        exe_path = self.find_api_binary()
+        py_entry = proj_root / "backend" / "desktop_entry.py"
+        if py_entry.exists():
+            log(f"Starting backend via python entrypoint: {py_entry}")
+            self.proc = subprocess.Popen(
+                [sys.executable, str(py_entry), "--host", "0.0.0.0", "--port", str(self.port)],
+                cwd=str(proj_root / "backend"),
+                startupinfo=startupinfo,
+                creationflags=creationflags,
+            )
+        elif exe_path:
             log(f"Starting standalone backend binary: {exe_path}")
             self.proc = subprocess.Popen(
-                [str(exe_path), "--port", str(self.port)],
+                [str(exe_path), "--host", "0.0.0.0", "--port", str(self.port)],
                 startupinfo=startupinfo,
                 creationflags=creationflags,
             )
         else:
-            py_entry = ROOT_DIR / "backend" / "desktop_entry.py"
-            if py_entry.exists():
-                log(f"Backend binary not found; starting via python entrypoint: {py_entry}")
-                self.proc = subprocess.Popen(
-                    [sys.executable, str(py_entry), "--port", str(self.port)],
-                    startupinfo=startupinfo,
-                    creationflags=creationflags,
-                )
-            else:
-                log("WARNING: Neither DentalCarePro-API.exe nor desktop_entry.py found.")
+            log("WARNING: Neither DentalCarePro-API.exe nor desktop_entry.py found.")
 
-        # Wait for API to become ready
         attempts = 0
-        while attempts < 25:
+        while attempts < 15:
             time.sleep(1)
             if self.is_healthy():
                 log(f"DentalCare Pro API verified healthy on port {self.port}.")
                 return
             attempts += 1
 
-        log("WARNING: API did not respond to health check within 25 seconds.")
+        log("WARNING: API did not respond to health check within 15 seconds.")
 
     def check_and_recover(self):
         if self.proc and self.proc.poll() is not None:
@@ -205,15 +257,7 @@ class DesktopApiBridge:
     def onSetupComplete(self):
         log("Setup complete! Transitioning to main application dashboard...")
         if self.window:
-            port = 8000
-            try:
-                if CONFIG_FILE.exists():
-                    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                        cfg = json.load(f)
-                        port = cfg.get("PORT", 8000)
-            except Exception:
-                pass
-            target_url = f"http://127.0.0.1:{port}"
+            target_url = "http://localhost:3000" if self.supervisor.is_web_healthy() else f"http://127.0.0.1:{self.supervisor.port}"
             self.window.load_url(target_url)
 
 
@@ -247,7 +291,6 @@ def main():
     log("DentalCare Pro Desktop Application Shell Starting")
     log("==================================================")
 
-    # Determine configured port
     api_port = 8000
     is_first_run = not CONFIG_FILE.exists()
 
@@ -259,19 +302,16 @@ def main():
         except Exception:
             pass
 
-    # Start Supervisor
-    supervisor = BackendSupervisor(port=api_port)
+    supervisor = BackendSupervisor(port=api_port, web_port=3000)
     supervisor.start()
 
-    # Determine initial URL
     wizard_html = BASE_DIR / "wizard.html"
-    splash_html = BASE_DIR / "splash.html"
 
     if is_first_run and wizard_html.exists():
         initial_url = wizard_html.as_uri()
         log(f"First-launch detected. Loading Setup Wizard: {initial_url}")
     else:
-        initial_url = f"http://127.0.0.1:{api_port}"
+        initial_url = "http://localhost:3000"
         log(f"Loading DentalCare Pro clinical workspace: {initial_url}")
 
     # Window State
