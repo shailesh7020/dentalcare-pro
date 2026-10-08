@@ -10,16 +10,18 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
+  const [needsSetup, setNeedsSetup] = useState(false);
+
   useEffect(() => {
     fetch("/api/setup/status")
       .then((r) => r.json())
       .then((data) => {
         if (data && data.is_initialized === false) {
-          router.replace("/setup");
+          setNeedsSetup(true);
         }
       })
       .catch(() => null);
-  }, [router]);
+  }, []);
 
   async function performLogin(loginEmail: string, loginPassword: string) {
     setPending(true);
@@ -55,6 +57,25 @@ export default function LoginPage() {
         </div>
         <h1>Welcome, Doctor</h1>
         <p>Click below to open your clinic workspace.</p>
+        {needsSetup && (
+          <div
+            style={{
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              padding: "10px 14px",
+              borderRadius: "10px",
+              marginBottom: "12px",
+              fontSize: "13px",
+              color: "#166534",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ fontWeight: 600 }}>✨ First-Time Clinic Setup</div>
+            <div style={{ fontSize: "12px", marginTop: "2px", color: "#15803d" }}>
+              Configure clinic details in 5 minutes with the Setup Wizard, or sign in directly below.
+            </div>
+          </div>
+        )}
         <button
           type="button"
           className="new-button"
@@ -69,9 +90,9 @@ export default function LoginPage() {
           className="new-button"
           style={{
             marginBottom: "12px",
-            background: "#f1f5f9",
-            color: "#0f172a",
-            border: "1px solid #cbd5e1",
+            background: needsSetup ? "#0f766e" : "#f1f5f9",
+            color: needsSetup ? "#ffffff" : "#0f172a",
+            border: needsSetup ? "none" : "1px solid #cbd5e1",
             fontWeight: 600,
           }}
           onClick={() => router.push("/setup")}

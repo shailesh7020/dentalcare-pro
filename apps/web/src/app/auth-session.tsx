@@ -15,7 +15,11 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (pathname === "/login") { setState("expired"); return; }
+    const isPublic = pathname === "/login" || pathname === "/setup" || pathname?.startsWith("/setup/");
+    if (isPublic) {
+      setState("expired");
+      return;
+    }
     async function restore() {
       try {
         const response = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin" });
@@ -24,13 +28,24 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         setState("authenticated");
       } catch {
         setState("expired");
-        window.location.assign("/login");
+        if (window.location.pathname !== "/login" && !window.location.pathname.startsWith("/setup")) {
+          window.location.assign("/login");
+        }
       }
     }
     void restore();
   }, [pathname]);
 
-  useEffect(() => configureApiSession(accessToken, async () => { setAccessToken(null); setState("expired"); window.location.assign("/login"); }), [accessToken]);
+  useEffect(() => {
+    const isPublic = pathname === "/login" || pathname === "/setup" || pathname?.startsWith("/setup/");
+    return configureApiSession(accessToken, async () => {
+      setAccessToken(null);
+      setState("expired");
+      if (!isPublic && window.location.pathname !== "/login" && !window.location.pathname.startsWith("/setup")) {
+        window.location.assign("/login");
+      }
+    });
+  }, [accessToken, pathname]);
   const value = useMemo<Session>(() => ({ state, accessToken, logout: async () => { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); setAccessToken(null); setState("expired"); window.location.assign("/login"); } }), [accessToken, state]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
