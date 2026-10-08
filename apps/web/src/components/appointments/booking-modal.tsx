@@ -33,6 +33,7 @@ interface DentistOption {
   first_name: string;
   last_name: string;
   role: string;
+  email?: string;
 }
 
 interface ChairOption {
@@ -348,11 +349,16 @@ export function BookingModal({
                 className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
               >
                 <option value="">Select Dentist</option>
-                {dentistsQuery.data?.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    Dr. {d.first_name} {d.last_name}
-                  </option>
-                ))}
+                {dentistsQuery.data?.map((d, _, arr) => {
+                  const hasDuplicateName = arr.filter(
+                    (other) => `${other.first_name} ${other.last_name}` === `${d.first_name} ${d.last_name}`
+                  ).length > 1;
+                  return (
+                    <option key={d.id} value={d.id}>
+                      Dr. {d.first_name} {d.last_name}{hasDuplicateName && d.email ? ` (${d.email})` : ""}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 

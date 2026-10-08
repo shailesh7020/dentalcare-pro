@@ -571,11 +571,16 @@ function TreatmentNewForm() {
                   required
                 >
                   <option value="">Select attending dentist</option>
-                  {(cliniciansQuery.data || []).map((doc: any) => (
-                    <option key={doc.id} value={doc.id}>
-                      Dr. {doc.first_name} {doc.last_name} ({doc.specialization || "General"})
-                    </option>
-                  ))}
+                  {(cliniciansQuery.data || []).map((doc: any, _: number, arr: any[]) => {
+                    const hasDuplicateName = arr.filter(
+                      (other) => `${other.first_name} ${other.last_name}` === `${doc.first_name} ${doc.last_name}`
+                    ).length > 1;
+                    return (
+                      <option key={doc.id} value={doc.id}>
+                        Dr. {doc.first_name} {doc.last_name} ({doc.specialization || (hasDuplicateName && doc.email ? doc.email : "General")})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>

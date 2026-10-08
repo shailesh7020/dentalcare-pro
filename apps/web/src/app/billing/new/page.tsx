@@ -48,6 +48,7 @@ interface UserOption {
   first_name: string;
   last_name: string;
   role: string;
+  email?: string;
 }
 
 interface TreatmentProcedureOption {
@@ -439,11 +440,16 @@ function InvoiceComposerContent() {
                 required
               >
                 <option value="">-- Choose Clinician --</option>
-                {cliniciansList.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    Dr. {u.first_name} {u.last_name} ({u.role || "DENTIST"})
-                  </option>
-                ))}
+                {cliniciansList.map((u, _, arr) => {
+                  const hasDuplicateName = arr.filter(
+                    (other) => `${other.first_name} ${other.last_name}` === `${u.first_name} ${u.last_name}`
+                  ).length > 1;
+                  return (
+                    <option key={u.id} value={u.id}>
+                      Dr. {u.first_name} {u.last_name} ({hasDuplicateName && u.email ? u.email : (u.role || "DENTIST")})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 

@@ -30,6 +30,7 @@ export interface Dentist {
   first_name: string;
   last_name: string;
   role: string;
+  email?: string;
 }
 
 export interface Appointment {

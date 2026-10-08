@@ -361,11 +361,16 @@ function AppointmentsContent() {
                 aria-label="Filter directory by clinician"
               >
                 <option value="ALL">All Clinicians</option>
-                {dentists.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    Dr. {d.first_name} {d.last_name}
-                  </option>
-                ))}
+                {dentists.map((d, _, arr) => {
+                  const hasDuplicateName = arr.filter(
+                    (other) => `${other.first_name} ${other.last_name}` === `${d.first_name} ${d.last_name}`
+                  ).length > 1;
+                  return (
+                    <option key={d.id} value={d.id}>
+                      Dr. {d.first_name} {d.last_name}{hasDuplicateName && (d as any).email ? ` (${(d as any).email})` : ""}
+                    </option>
+                  );
+                })}
               </select>
 
               {/* Chair Filter */}

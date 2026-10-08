@@ -33,34 +33,32 @@ async def seed() -> None:
             Role.ASSISTANT,
         ]
         for role in roles:
-            for domain in ["dentalcare.local", "dentalcare.com"]:
-                email = f"{role.value.lower()}@{domain}"
-                existing = await db.scalar(select(User).where(User.email == email))
-                if existing is None:
-                    db.add(
-                        User(
-                            clinic_id=None if role == Role.SUPER_ADMIN else clinic.id,
-                            email=email,
-                            password_hash=hash_password(password),
-                            first_name=role.value.replace("_", " ").title(),
-                            last_name="Demo",
-                            role=role,
-                        )
-                    )
-        # Convenience alias for admin@dentalcare.com and admin@dentalcarepro.com
-        for alias in ["admin@dentalcare.com", "admin@dentalcare.local", "admin@dentalcarepro.com"]:
-            existing = await db.scalar(select(User).where(User.email == alias))
+            email = f"{role.value.lower()}@dentalcare.com"
+            existing = await db.scalar(select(User).where(User.email == email))
             if existing is None:
                 db.add(
                     User(
-                        clinic_id=clinic.id,
-                        email=alias,
+                        clinic_id=None if role == Role.SUPER_ADMIN else clinic.id,
+                        email=email,
                         password_hash=hash_password(password),
-                        first_name="Admin",
+                        first_name=role.value.replace("_", " ").title(),
                         last_name="Demo",
-                        role=Role.CLINIC_ADMIN,
+                        role=role,
                     )
                 )
+        # Convenience alias for admin@dentalcare.com
+        existing_admin = await db.scalar(select(User).where(User.email == "admin@dentalcare.com"))
+        if existing_admin is None:
+            db.add(
+                User(
+                    clinic_id=clinic.id,
+                    email="admin@dentalcare.com",
+                    password_hash=hash_password(password),
+                    first_name="Admin",
+                    last_name="Demo",
+                    role=Role.CLINIC_ADMIN,
+                )
+            )
 
         from app.models.appointment import Chair, ChairStatus
         demo_chairs = [
