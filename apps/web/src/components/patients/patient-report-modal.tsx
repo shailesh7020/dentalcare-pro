@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Activity,
   AlertCircle,
@@ -484,6 +485,28 @@ export function PatientReportModal({
           {!generatedMeta ? (
             /* STAGE 1: Section Selection */
             <div className="space-y-5">
+              {/* Doctor Quick-Track Banner */}
+              <div className="p-3.5 bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <Printer className="w-5 h-5 text-teal-700 dark:text-teal-400 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-teal-950 dark:text-teal-200">
+                      Need a simple 1-click printable report?
+                    </p>
+                    <p className="text-[11px] text-teal-700 dark:text-teal-400">
+                      Instant summary of medical alerts, treatments, tooth chart, and prescriptions on a single sheet.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href={`/patients/${patient.id}/report`}
+                  onClick={onClose}
+                  className="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-md shadow-2xs whitespace-nowrap text-center"
+                >
+                  Open 1-Page Report →
+                </Link>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">

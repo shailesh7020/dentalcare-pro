@@ -31,6 +31,7 @@ import {
   IndianRupee,
   Receipt,
   CreditCard,
+  Printer,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -441,15 +442,24 @@ export default function PatientProfilePage({
                 <Upload size={13} /> Upload File
               </button>
               {!isArchived && (
-                <button
-                  type="button"
-                  onClick={() => setIsReportModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-semibold text-xs rounded-md shadow-2xs transition-colors"
-                  title="Generate Official Comprehensive Patient Clinical Report & Share on WhatsApp"
-                >
-                  <FileDown size={13} className="text-teal-700 dark:text-teal-400" />
-                  Generate Patient Report
-                </button>
+                <>
+                  <Link
+                    href={`/patients/${id}/report`}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-md shadow-2xs transition-colors"
+                    title="Open Doctor's Single-Page Patient Report & Print Sheet"
+                  >
+                    <Printer size={13} /> 1-Page Report & Print
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setIsReportModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-semibold text-xs rounded-md shadow-2xs transition-colors"
+                    title="Custom Section Selector & WhatsApp Direct PDF"
+                  >
+                    <FileDown size={13} className="text-teal-700 dark:text-teal-400" />
+                    Custom Report
+                  </button>
+                </>
               )}
               {isArchived ? (
                 <button
