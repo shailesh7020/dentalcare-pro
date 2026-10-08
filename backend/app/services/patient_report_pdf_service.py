@@ -609,6 +609,36 @@ class PatientReportPDFService:
             )
             story.append(Paragraph(legend_text, meta_style))
 
+            notable_teeth = patient_data.get("notable_teeth") or []
+            if notable_teeth:
+                story.append(Spacer(1, 4))
+                notable_hdr = [
+                    Paragraph("<b>Tooth #</b>", tbl_hdr_style),
+                    Paragraph("<b>Anatomical Tooth Name</b>", tbl_hdr_style),
+                    Paragraph("<b>Condition / Diagnosis</b>", tbl_hdr_style),
+                    Paragraph("<b>Clinical Notes & Surfaces</b>", tbl_hdr_style),
+                ]
+                notable_rows = [notable_hdr]
+                for item in notable_teeth[:10]:
+                    notable_rows.append([
+                        Paragraph(f"<b>#{item.get('tooth_number')}</b>", cell_bold),
+                        Paragraph(str(item.get("name") or "Tooth"), cell_style),
+                        Paragraph(f"<b>{item.get('condition')}</b>", cell_style),
+                        Paragraph(str(item.get("details") or "—"), cell_style),
+                    ])
+                col_w_notable = [45, 175, 135, 168]
+                notable_tbl = Table(notable_rows, colWidths=col_w_notable)
+                notable_tbl.setStyle(TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f8fafc")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, border_color),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                    ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ]))
+                story.append(notable_tbl)
+
         # ==========================================
         # 6. TREATMENT TIMELINE & HISTORY
         # ==========================================

@@ -10,12 +10,18 @@ import {
   AlertTriangle,
   ArrowLeft,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
+  Copy,
   Download,
+  Eye,
+  ExternalLink,
   FileCheck,
   FileText,
   HeartPulse,
+  Info,
+  Layers,
   Mail,
   MapPin,
   Phone,
@@ -26,11 +32,21 @@ import {
   Sparkles,
   Stethoscope,
   User,
+  X,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog } from "@/components/ui/dialog";
+import { ToothSVG, ToothRenderMode } from "@/components/odontogram/tooth-svg";
+import {
+  COLOR_STANDARDS,
+  NumberingSystem,
+  PatientOdontogram,
+  Tooth,
+  getToothLabel,
+} from "@/app/patients/[id]/odontogram/types";
 
 interface MedicalHistory {
   diabetes: boolean;
@@ -160,6 +176,11 @@ function SinglePagePatientReportContent({ id }: { id: string }) {
   const [downloading, setDownloading] = useState(false);
   const [sharingWa, setSharingWa] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const [selectedTooth, setSelectedTooth] = useState<Tooth | null>(null);
+  const [numberingSystem, setNumberingSystem] = useState<NumberingSystem>("FDI");
+  const [renderMode, setRenderMode] = useState<ToothRenderMode>("ANATOMICAL");
+  const [copiedWaText, setCopiedWaText] = useState(false);
+  const [showWaPreview, setShowWaPreview] = useState(false);
 
   // 1. Fetch Patient
   const patientQuery = useQuery<PatientDetail>({
@@ -198,11 +219,11 @@ function SinglePagePatientReportContent({ id }: { id: string }) {
   });
 
   // 5. Fetch Odontogram
-  const odontogramQuery = useQuery({
+  const odontogramQuery = useQuery<PatientOdontogram | null>({
     queryKey: ["patient-odontogram", id],
     queryFn: async () => {
       try {
-        const res = await api.get(`/patients/${id}/odontogram`);
+        const res = await api.get<PatientOdontogram>(`/patients/${id}/odontogram`);
         return res.data;
       } catch {
         return null;
@@ -215,6 +236,86 @@ function SinglePagePatientReportContent({ id }: { id: string }) {
   const prescriptions = prescriptionsQuery.data || [];
   const appointments = appointmentsQuery.data || [];
   const odontogram = odontogramQuery.data;
+
+  // Odontogram Teeth Partition & KPI computation
+  const teethList: Tooth[] = Array.isArray(odontogram?.teeth) ? odontogram.teeth : [];
+
+  const resolveArchAndQuadrant = (t: Tooth): { arch: string; quadrant: number } => {
+    const num = Number.parseInt(t.tooth_number, 10);
+    if (!Number.isNaN(num) && num >= 11 && num <= 85) {
+      const quad = Math.floor(num / 10);
+      if (quad === 1 || quad === 2 || quad === 5 || quad === 6) {
+        return { arch: "UPPER", quadrant: quad };
+      }
+      if (quad === 3 || quad === 4 || quad === 7 || quad === 8) {
+        return { arch: "LOWER", quadrant: quad };
+      }
+    }
+    return { arch: t.arch, quadrant: t.quadrant };
+  };
+
+  const upperRightTeeth = teethList
+    .filter((t) => {
+      const { arch, quadrant } = resolveArchAndQuadrant(t);
+      return arch === "UPPER" && (quadrant === 1 || quadrant === 5);
+    })
+    .sort((a, b) => Number.parseInt(b.tooth_number) - Number.parseInt(a.tooth_number)); // 18 down to 11
+
+  const upperLeftTeeth = teethList
+    .filter((t) => {
+      const { arch, quadrant } = resolveArchAndQuadrant(t);
+      return arch === "UPPER" && (quadrant === 2 || quadrant === 6);
+    })
+    .sort((a, b) => Number.parseInt(a.tooth_number) - Number.parseInt(b.tooth_number)); // 21 up to 28
+
+  const lowerRightTeeth = teethList
+    .filter((t) => {
+      const { arch, quadrant } = resolveArchAndQuadrant(t);
+      return arch === "LOWER" && (quadrant === 4 || quadrant === 8);
+    })
+    .sort((a, b) => Number.parseInt(b.tooth_number) - Number.parseInt(a.tooth_number)); // 48 down to 41
+
+  const lowerLeftTeeth = teethList
+    .filter((t) => {
+      const { arch, quadrant } = resolveArchAndQuadrant(t);
+      return arch === "LOWER" && (quadrant === 3 || quadrant === 7);
+    })
+    .sort((a, b) => Number.parseInt(a.tooth_number) - Number.parseInt(b.tooth_number)); // 31 up to 38
+
+  const diagnosedTeeth = teethList.filter(
+    (t) =>
+      (t.primary_status && t.primary_status !== "HEALTHY") ||
+      t.is_missing ||
+      t.is_extracted ||
+      t.has_crown ||
+      t.has_root_canal ||
+      t.has_implant ||
+      (t.surfaces && t.surfaces.some((s) => s.condition !== "HEALTHY" || (s.treatment && s.treatment !== "NONE")))
+  );
+
+  const totalTeethCount = teethList.length || 32;
+  const cariesCount = teethList.filter(
+    (t) => t.primary_status === "CARIES" || t.surfaces?.some((s) => s.condition === "CARIES")
+  ).length;
+  const rctCount = teethList.filter(
+    (t) => t.has_root_canal || t.primary_status === "ROOT_CANAL"
+  ).length;
+  const crownCount = teethList.filter(
+    (t) => t.has_crown || t.primary_status === "CROWN" || t.primary_status === "TEMPORARY_CROWN"
+  ).length;
+  const fillingCount = teethList.filter(
+    (t) =>
+      t.primary_status === "FILLING" ||
+      t.primary_status === "TEMPORARY_FILLING" ||
+      t.surfaces?.some((s) => s.treatment === "FILLING" || s.condition === "FILLING")
+  ).length;
+  const implantCount = teethList.filter(
+    (t) => t.has_implant || t.primary_status === "IMPLANT"
+  ).length;
+  const missingCount = teethList.filter(
+    (t) => t.is_missing || t.is_extracted || t.primary_status === "MISSING" || t.primary_status === "EXTRACTION"
+  ).length;
+  const soundTeethCount = Math.max(0, totalTeethCount - diagnosedTeeth.length);
 
   // Upcoming appointment
   const nowStr = new Date().toISOString().split("T")[0];
@@ -250,6 +351,92 @@ function SinglePagePatientReportContent({ id }: { id: string }) {
     if (mh.smoking) alerts.push({ text: "Smoker", severity: "warning" });
   }
 
+  // Generate Complete Clinical WhatsApp Message with Anatomical Odontogram Chart
+  const generateWhatsAppMessage = () => {
+    if (!patient) return "";
+    const cleanFirst = patient.first_name || "Patient";
+    const cleanLast = patient.last_name || "";
+    const patientName = `${cleanFirst} ${cleanLast}`.trim();
+    const today = new Date().toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+    const lines: string[] = [
+      `🏥 *DENTALCARE PRO CLINICAL REPORT*`,
+      `📄 *PATIENT CASE SUMMARY & DENTAL CHART*`,
+      `👤 Patient: *${patientName}* (ID: #${patient.patient_number})`,
+      `📅 Date of Issue: ${today}`,
+      "",
+      `🦷 *ANATOMICAL ODONTOGRAM DENTAL CHART (TEETH STATUS)*`,
+      `• Chart Overview: Upper & Lower Dental Arches (${totalTeethCount} Teeth Charted)`,
+      `• Sound / Healthy Teeth: ${soundTeethCount}`,
+    ];
+
+    const findingsOverview: string[] = [];
+    if (cariesCount > 0) findingsOverview.push(`${cariesCount} Caries/Decay`);
+    if (rctCount > 0) findingsOverview.push(`${rctCount} Root Canal (RCT)`);
+    if (crownCount > 0) findingsOverview.push(`${crownCount} Crowns/Caps`);
+    if (fillingCount > 0) findingsOverview.push(`${fillingCount} Fillings/Restorations`);
+    if (implantCount > 0) findingsOverview.push(`${implantCount} Implants`);
+    if (missingCount > 0) findingsOverview.push(`${missingCount} Missing`);
+
+    if (findingsOverview.length > 0) {
+      lines.push(`• Diagnostic Findings: ${findingsOverview.join(" | ")}`);
+    } else {
+      lines.push(`• Diagnostic Findings: All teeth sound and healthy!`);
+    }
+
+    if (diagnosedTeeth.length > 0) {
+      lines.push(`• *Specific Teeth Diagnoses & Findings:*`);
+      diagnosedTeeth.slice(0, 10).forEach((t) => {
+        const cond = t.primary_status?.replace(/_/g, " ") || "Diagnosed";
+        const surfList = t.surfaces?.filter((s) => s.condition !== "HEALTHY").map((s) => s.surface);
+        const surfStr = surfList && surfList.length > 0 ? ` [${surfList.join(", ")}]` : "";
+        lines.push(`   ▶ Tooth #${getToothLabel(t, numberingSystem)} (${t.name}): *${cond}*${surfStr}`);
+      });
+      if (diagnosedTeeth.length > 10) {
+        lines.push(`   ▶ ...and ${diagnosedTeeth.length - 10} more charted teeth.`);
+      }
+    }
+
+    if (treatments.length > 0) {
+      const tx = treatments[0];
+      const desc = tx.diagnosis || tx.procedure_performed || "Dental Procedure";
+      lines.push("");
+      lines.push(`📋 *LATEST CLINICAL TREATMENT:*`);
+      lines.push(`• ${desc} (${new Date(tx.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })})`);
+      if (tx.procedures && tx.procedures.length > 0) {
+        lines.push(`  Procedures: ${tx.procedures.map((p) => `${p.procedure_name}${p.tooth_number ? ` (#${p.tooth_number})` : ""}`).join(", ")}`);
+      }
+    }
+
+    if (prescriptions.length > 0 && prescriptions[0].items && prescriptions[0].items.length > 0) {
+      lines.push("");
+      lines.push(`💊 *PRESCRIBED MEDICATIONS:*`);
+      const meds = prescriptions[0].items.map((m) => `${m.medicine_name} (${m.dosage}, ${m.frequency})`).slice(0, 3).join("; ");
+      lines.push(`• ${meds}`);
+    }
+
+    if (upcomingAppointment) {
+      lines.push("");
+      lines.push(`📅 *NEXT APPOINTMENT / FOLLOW-UP:*`);
+      lines.push(`• Date: ${upcomingAppointment.date} at ${upcomingAppointment.start_time}`);
+    }
+
+    const reportUrl = typeof window !== "undefined" ? window.location.href.split("?")[0] : "";
+    if (reportUrl) {
+      lines.push("");
+      lines.push(`🌐 *View Full Interactive Anatomical Chart & Official PDF:*`);
+      lines.push(reportUrl);
+    }
+
+    lines.push("");
+    lines.push(`If you have any questions or tooth discomfort, please contact our clinic.`);
+    return lines.join("\n");
+  };
+
   // 1-Click Official PDF Download
   const handleDownloadPdf = async () => {
     try {
@@ -280,42 +467,57 @@ function SinglePagePatientReportContent({ id }: { id: string }) {
     }
   };
 
-  // 1-Click WhatsApp Direct Dispatch
+  // 1-Click WhatsApp Direct Dispatch with Anatomical Odontogram Summary
   const handleWhatsAppShare = async () => {
     if (!patient?.mobile_number) {
       alert("Patient does not have a registered mobile phone number.");
       return;
     }
+    const cleanPhone = patient.mobile_number.replace(/\D/g, "");
+    const waText = generateWhatsAppMessage();
     try {
       setSharingWa(true);
       setShareFeedback(null);
       const res = await api.post(`/patients/${id}/reports/share`, {
         delivery_method: "WHATSAPP",
         recipient: patient.mobile_number,
+        notes: waText,
       });
       const data = res.data;
       if (data?.success) {
-        setShareFeedback(`Directly sent Clinical Report to ${patient.first_name} via WhatsApp!`);
+        setShareFeedback(`Directly sent Clinical Report & Odontogram to ${patient.first_name} via WhatsApp!`);
       } else if (data?.whatsapp_url) {
         window.open(data.whatsapp_url, "_blank");
-        setShareFeedback("Opened WhatsApp Web with report preview!");
+        setShareFeedback("Opened WhatsApp Web with report & odontogram preview!");
       } else {
-        const cleanPhone = patient.mobile_number.replace(/\D/g, "");
-        const msg = encodeURIComponent(
-          `Hello ${patient.first_name}, here is your DentalCare Clinical Summary Report (ID: ${patient.patient_number}). Follow-up: ${upcomingAppointment?.date || "As recommended by Dr."}.`
-        );
+        const msg = encodeURIComponent(waText);
         window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
-        setShareFeedback("Opened WhatsApp to share report!");
+        setShareFeedback("Opened WhatsApp with detailed odontogram report!");
       }
       setTimeout(() => setShareFeedback(null), 5000);
     } catch {
-      const cleanPhone = patient.mobile_number.replace(/\D/g, "");
-      const msg = encodeURIComponent(
-        `Hello ${patient.first_name}, here is your DentalCare Clinical Summary Report (ID: ${patient.patient_number}).`
-      );
+      const msg = encodeURIComponent(waText);
       window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
+      setShareFeedback("Opened WhatsApp with detailed odontogram report!");
+      setTimeout(() => setShareFeedback(null), 5000);
     } finally {
       setSharingWa(false);
+    }
+  };
+
+  // Copy WhatsApp Summary to Clipboard
+  const handleCopyWhatsAppText = async () => {
+    const text = generateWhatsAppMessage();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedWaText(true);
+      setShareFeedback("WhatsApp message with Odontogram Chart copied to clipboard!");
+      setTimeout(() => {
+        setCopiedWaText(false);
+        setShareFeedback(null);
+      }, 4000);
+    } catch {
+      alert("Failed to copy to clipboard.");
     }
   };
 
@@ -392,6 +594,23 @@ function SinglePagePatientReportContent({ id }: { id: string }) {
             >
               <Download size={13} />
               {downloading ? "Preparing PDF..." : "Download PDF"}
+            </button>
+
+            <button
+              onClick={handleCopyWhatsAppText}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-emerald-800 text-xs font-bold rounded-md border border-emerald-300 shadow-2xs transition-colors cursor-pointer"
+              title="Copy formatted WhatsApp Odontogram Report to clipboard"
+            >
+              {copiedWaText ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+              {copiedWaText ? "Copied!" : "Copy WA Text"}
+            </button>
+
+            <button
+              onClick={() => setShowWaPreview(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-md border border-slate-300 shadow-2xs transition-colors cursor-pointer"
+              title="Preview clinical WhatsApp dispatch message"
+            >
+              <Eye size={13} /> Preview WA
             </button>
 
             <button
@@ -573,27 +792,373 @@ function SinglePagePatientReportContent({ id }: { id: string }) {
             </div>
           </section>
 
-          {/* 5. ODONTOGRAM SUMMARY (TEETH STATUS CHART) */}
-          {odontogram?.teeth && (
-            <section className="border border-slate-200 rounded-lg p-3.5 break-inside-avoid">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 flex items-center gap-1.5">
-                <Activity size={13} className="text-teal-700" /> Odontogram Tooth Chart Summary
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(odontogram.teeth as Record<string, any>)
-                  .filter(([_, tooth]) => tooth.conditions && tooth.conditions.length > 0)
-                  .map(([toothNum, tooth]) => (
-                    <span
-                      key={toothNum}
-                      className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-xs text-slate-800 font-medium"
-                    >
-                      <strong className="text-teal-800">#{toothNum}</strong>:{" "}
-                      {tooth.conditions.map((c: any) => c.name || c.code || c).join(", ")}
-                    </span>
-                  ))}
+          {/* 5. ANATOMICAL ODONTOGRAM CHART (REAL TEETH STRUCTURE) */}
+          <section className="border border-slate-200 rounded-xl p-4 sm:p-5 break-inside-avoid bg-white shadow-2xs space-y-4">
+            {/* Header with Title and Screen Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                  <Activity size={16} className="text-teal-700" />
+                  Odontogram Dental Chart (Anatomical Teeth Structure)
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Complete anatomical mapping of Maxillary (Upper) and Mandibular (Lower) dental arches with biological root anatomy, cusps, and clinical conditions.
+                </p>
               </div>
-            </section>
-          )}
+
+              {/* Screen Controls: Notation & Render Mode & Edit Link (hidden in print) */}
+              <div className="flex items-center gap-2 print:hidden">
+                {/* Notation */}
+                <div className="flex items-center bg-slate-100 rounded-md p-0.5 border border-slate-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setNumberingSystem("FDI")}
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-colors cursor-pointer ${
+                      numberingSystem === "FDI" ? "bg-teal-700 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    FDI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNumberingSystem("UNIVERSAL")}
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-colors cursor-pointer ${
+                      numberingSystem === "UNIVERSAL" ? "bg-teal-700 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Univ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNumberingSystem("PALMER")}
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-colors cursor-pointer ${
+                      numberingSystem === "PALMER" ? "bg-teal-700 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Palmer
+                  </button>
+                </div>
+
+                {/* Style */}
+                <div className="flex items-center bg-slate-100 rounded-md p-0.5 border border-slate-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setRenderMode("ANATOMICAL")}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                      renderMode === "ANATOMICAL" ? "bg-slate-900 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Real Tooth
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRenderMode("GEOMETRIC")}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                      renderMode === "GEOMETRIC" ? "bg-slate-900 text-white shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Schematic
+                  </button>
+                </div>
+
+                {/* Link to Full Interactive Odontogram Editor */}
+                <Link
+                  href={`/patients/${id}/odontogram`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded text-xs font-semibold transition-colors"
+                  title="Open full interactive chart in new tab"
+                >
+                  <ExternalLink size={12} /> Chart Editor
+                </Link>
+              </div>
+            </div>
+
+            {/* Quick KPI Stats Summary Badges */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-center text-xs">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Teeth</span>
+                <span className="text-base font-extrabold text-slate-800">{totalTeethCount}</span>
+              </div>
+              <div className="bg-emerald-50/60 border border-emerald-200 rounded-lg p-2">
+                <span className="text-[10px] uppercase font-bold text-emerald-700 block">Healthy / Sound</span>
+                <span className="text-base font-extrabold text-emerald-700">{soundTeethCount}</span>
+              </div>
+              <div className={`border rounded-lg p-2 ${cariesCount > 0 ? "bg-rose-50 border-rose-300 text-rose-800" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                <span className="text-[10px] uppercase font-bold block">Cavities (Caries)</span>
+                <span className="text-base font-extrabold">{cariesCount}</span>
+              </div>
+              <div className={`border rounded-lg p-2 ${rctCount > 0 ? "bg-purple-50 border-purple-300 text-purple-800" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                <span className="text-[10px] uppercase font-bold block">Root Canals (RCT)</span>
+                <span className="text-base font-extrabold">{rctCount}</span>
+              </div>
+              <div className={`border rounded-lg p-2 ${crownCount > 0 ? "bg-amber-50 border-amber-300 text-amber-800" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                <span className="text-[10px] uppercase font-bold block">Crowns / Caps</span>
+                <span className="text-base font-extrabold">{crownCount}</span>
+              </div>
+              <div className={`border rounded-lg p-2 ${fillingCount > 0 ? "bg-blue-50 border-blue-300 text-blue-800" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                <span className="text-[10px] uppercase font-bold block">Fillings / Restored</span>
+                <span className="text-base font-extrabold">{fillingCount}</span>
+              </div>
+              <div className={`border rounded-lg p-2 ${missingCount > 0 ? "bg-slate-100 border-slate-300 text-slate-700" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                <span className="text-[10px] uppercase font-bold block">Missing / Extracted</span>
+                <span className="text-base font-extrabold">{missingCount}</span>
+              </div>
+            </div>
+
+            {/* The Visual Anatomical Arches Box */}
+            <div className="bg-slate-50/70 border border-slate-200 rounded-xl p-3 sm:p-4 overflow-x-auto print:overflow-visible">
+              <div className="min-w-[680px] max-w-4xl mx-auto space-y-4">
+                {/* Maxillary (Upper) Arch Header */}
+                <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-slate-500 uppercase px-2">
+                  <span>Patient Right (Viewer Left)</span>
+                  <span className="text-teal-800 font-extrabold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                    Maxillary (Upper) Dental Arch
+                  </span>
+                  <span>Patient Left (Viewer Right)</span>
+                </div>
+
+                {/* Upper Arch Teeth Strip */}
+                <div className="flex items-center justify-center gap-2 bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                  {/* Upper Right Quadrant 1 (18 down to 11) */}
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    {upperRightTeeth.map((tooth) => (
+                      <ToothSVG
+                        key={tooth.id}
+                        tooth={tooth}
+                        numberingSystem={numberingSystem}
+                        isSelected={selectedTooth?.id === tooth.id}
+                        onSelectTooth={(t) => setSelectedTooth(t)}
+                        renderMode={renderMode}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Midline Divider */}
+                  <div className="w-0.5 h-16 bg-teal-500/50 relative flex items-center justify-center">
+                    <span className="absolute -top-3 text-[8px] font-black text-teal-700 bg-teal-50 px-1 rounded border border-teal-200">
+                      MIDLINE
+                    </span>
+                  </div>
+
+                  {/* Upper Left Quadrant 2 (21 up to 28) */}
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    {upperLeftTeeth.map((tooth) => (
+                      <ToothSVG
+                        key={tooth.id}
+                        tooth={tooth}
+                        numberingSystem={numberingSystem}
+                        isSelected={selectedTooth?.id === tooth.id}
+                        onSelectTooth={(t) => setSelectedTooth(t)}
+                        renderMode={renderMode}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Occlusal Plane Separator */}
+                <div className="flex items-center justify-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest my-1">
+                  <span className="h-px flex-1 bg-slate-200" />
+                  <span>Occlusal / Biting Plane</span>
+                  <span className="h-px flex-1 bg-slate-200" />
+                </div>
+
+                {/* Mandibular (Lower) Arch Teeth Strip */}
+                <div className="flex items-center justify-center gap-2 bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                  {/* Lower Right Quadrant 4 (48 down to 41) */}
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    {lowerRightTeeth.map((tooth) => (
+                      <ToothSVG
+                        key={tooth.id}
+                        tooth={tooth}
+                        numberingSystem={numberingSystem}
+                        isSelected={selectedTooth?.id === tooth.id}
+                        onSelectTooth={(t) => setSelectedTooth(t)}
+                        renderMode={renderMode}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Midline Divider */}
+                  <div className="w-0.5 h-16 bg-teal-500/50 relative flex items-center justify-center">
+                    <span className="absolute -bottom-3 text-[8px] font-black text-teal-700 bg-teal-50 px-1 rounded border border-teal-200">
+                      MIDLINE
+                    </span>
+                  </div>
+
+                  {/* Lower Left Quadrant 3 (31 up to 38) */}
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    {lowerLeftTeeth.map((tooth) => (
+                      <ToothSVG
+                        key={tooth.id}
+                        tooth={tooth}
+                        numberingSystem={numberingSystem}
+                        isSelected={selectedTooth?.id === tooth.id}
+                        onSelectTooth={(t) => setSelectedTooth(t)}
+                        renderMode={renderMode}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mandibular (Lower) Arch Footer */}
+                <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-slate-500 uppercase px-2">
+                  <span>Patient Right</span>
+                  <span className="text-teal-800 font-extrabold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                    Mandibular (Lower) Dental Arch
+                  </span>
+                  <span>Patient Left</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Selected Tooth Detail Box (Interactive Clinical Inspection) */}
+            {selectedTooth ? (
+              <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-teal-700 text-white font-mono font-bold flex items-center justify-center text-sm shadow-2xs">
+                    #{getToothLabel(selectedTooth, numberingSystem)}
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 flex items-center gap-2">
+                      <span>{selectedTooth.name}</span>
+                      <span
+                        className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase"
+                        style={{ backgroundColor: COLOR_STANDARDS[selectedTooth.primary_status] || "#64748b" }}
+                      >
+                        {selectedTooth.primary_status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-600 mt-0.5">
+                      Arch: <strong>{selectedTooth.arch}</strong> · Type: <strong>{selectedTooth.tooth_type}</strong>
+                      {selectedTooth.surfaces && selectedTooth.surfaces.some((s) => s.condition !== "HEALTHY") && (
+                        <span>
+                          {" "}· Affected Surfaces:{" "}
+                          <strong>
+                            {selectedTooth.surfaces
+                              .filter((s) => s.condition !== "HEALTHY")
+                              .map((s) => `${s.surface} (${s.condition})`)
+                              .join(", ")}
+                          </strong>
+                        </span>
+                      )}
+                      {selectedTooth.notes && <span> · Notes: {selectedTooth.notes}</span>}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTooth(null)}
+                  className="px-2 py-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-slate-500 text-[11px] flex items-center justify-center gap-1.5 print:hidden">
+                <Info size={13} className="text-teal-600" />
+                <span>Click any tooth on the upper or lower arch above to inspect its roots, surfaces, and diagnosis.</span>
+              </div>
+            )}
+
+            {/* Diagnosed / Charted Teeth Findings Table */}
+            <div>
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5 flex items-center gap-1.5">
+                <FileCheck size={13} className="text-teal-700" /> Notable Dental Findings & Diagnosed Teeth
+              </h4>
+              {diagnosedTeeth.length > 0 ? (
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
+                      <tr>
+                        <th className="py-2 px-3">Tooth #</th>
+                        <th className="py-2 px-3">Anatomical Name</th>
+                        <th className="py-2 px-3">Diagnosis / Condition</th>
+                        <th className="py-2 px-3">Affected Surfaces / Details</th>
+                        <th className="py-2 px-3 text-right">Prosthetic / Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-800">
+                      {diagnosedTeeth.map((t) => (
+                        <tr key={t.id} className="hover:bg-slate-50/50">
+                          <td className="py-2 px-3 font-mono font-bold text-teal-800">
+                            #{getToothLabel(t, numberingSystem)}
+                          </td>
+                          <td className="py-2 px-3 font-semibold text-slate-900">{t.name}</td>
+                          <td className="py-2 px-3">
+                            <span
+                              className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase"
+                              style={{ backgroundColor: COLOR_STANDARDS[t.primary_status] || "#64748b" }}
+                            >
+                              {t.primary_status.replace(/_/g, " ")}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-slate-600 text-[11px]">
+                            {t.surfaces && t.surfaces.filter((s) => s.condition !== "HEALTHY").length > 0
+                              ? t.surfaces
+                                  .filter((s) => s.condition !== "HEALTHY")
+                                  .map((s) => `${s.surface} (${s.condition})`)
+                                  .join(", ")
+                              : t.notes || "Monitored during dental exam"}
+                          </td>
+                          <td className="py-2 px-3 text-right font-medium text-slate-600 text-[11px]">
+                            {t.has_crown
+                              ? "Prosthetic Crown"
+                              : t.has_root_canal
+                              ? "RCT Obturation"
+                              : t.has_implant
+                              ? "Titanium Implant"
+                              : t.is_missing || t.is_extracted
+                              ? "Absent / Missing"
+                              : "Active Monitoring"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>All 32 Teeth Healthy:</strong> No active cavities, root canal therapies, missing teeth, or prosthetic crowns detected. Full anatomical arches intact.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Clinical Color Legend */}
+            <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-[11px] font-semibold text-slate-600">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Legend:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_STANDARDS.HEALTHY }} />
+                <span>Healthy</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_STANDARDS.CARIES }} />
+                <span>Cavity / Caries</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_STANDARDS.FILLING }} />
+                <span>Filling / Restored</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_STANDARDS.ROOT_CANAL }} />
+                <span>Root Canal</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_STANDARDS.CROWN }} />
+                <span>Crown / Cap</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_STANDARDS.IMPLANT }} />
+                <span>Implant</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_STANDARDS.MISSING }} />
+                <span>Missing</span>
+              </div>
+            </div>
+          </section>
 
           {/* 6. CLINICAL PROCEDURES & TREATMENT HISTORY */}
           <section className="break-inside-avoid">
@@ -782,6 +1347,48 @@ function SinglePagePatientReportContent({ id }: { id: string }) {
           </footer>
         </div>
       </div>
+
+      {/* WhatsApp Message Preview Dialog */}
+      <Dialog
+        open={showWaPreview}
+        onOpenChange={setShowWaPreview}
+        title="WhatsApp Clinical Report Preview"
+        description="This is the exact structured dental message dispatched to the patient's WhatsApp, containing the full Anatomical Odontogram findings."
+      >
+        <div className="space-y-4">
+          <div className="bg-emerald-950/90 text-emerald-100 p-4 rounded-xl font-mono text-xs whitespace-pre-wrap max-h-[380px] overflow-y-auto border border-emerald-800 shadow-inner">
+            {generateWhatsAppMessage()}
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={() => setShowWaPreview(false)}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void handleCopyWhatsAppText();
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-md shadow-2xs transition-colors cursor-pointer"
+            >
+              <Copy size={13} /> Copy Text
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowWaPreview(false);
+                void handleWhatsAppShare();
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md shadow-2xs transition-colors cursor-pointer"
+            >
+              <CheckCircle2 size={13} /> Send on WhatsApp
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

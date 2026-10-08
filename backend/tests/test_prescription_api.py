@@ -102,7 +102,15 @@ class FakeApiDb:
         # 8. Prescription
         if "from prescriptions" in text:
             rxs = [i for i in self.items if isinstance(i, Prescription) and i.deleted_at is None]
-            return SimpleNamespace(scalar_one_or_none=lambda: rxs[0] if rxs else None, scalars=lambda: SimpleNamespace(all=lambda: rxs))
+            target = next((r for r in reversed(rxs) if str(r.id) in str(statement)), rxs[-1] if rxs else None)
+            if target:
+                if not getattr(target, "patient", None):
+                    target.patient = next((p for p in self.items if isinstance(p, Patient) and p.id == target.patient_id), None)
+                if not getattr(target, "dentist", None):
+                    target.dentist = next((u for u in self.items if isinstance(u, User) and u.id == target.dentist_id), None)
+                if not getattr(target, "treatment", None):
+                    target.treatment = next((t for t in self.items if isinstance(t, Treatment) and t.id == target.treatment_id), None)
+            return SimpleNamespace(scalar_one_or_none=lambda: target, scalars=lambda: SimpleNamespace(all=lambda: rxs))
 
         return SimpleNamespace(scalar_one=lambda: 0, scalar_one_or_none=lambda: None, scalars=lambda: SimpleNamespace(all=list))
 

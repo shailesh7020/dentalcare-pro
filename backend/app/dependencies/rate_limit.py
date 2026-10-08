@@ -50,6 +50,11 @@ def rate_limit(bucket: str, limit_name: str) -> Callable:
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many requests"
                 )
         except RedisError:
+            if settings.environment == "production":
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Rate limiter service unavailable",
+                )
             # Graceful degradation to in-memory limiter if Redis experiences an error
             allowed = _in_memory_rate_limit(key, limit, settings.rate_limit_window_seconds)
             if not allowed:

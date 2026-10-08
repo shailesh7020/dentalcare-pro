@@ -101,8 +101,9 @@ class FakeServiceDb:
         # 6. Prescription
         if "from prescriptions" in text:
             rxs = [i for i in self.items if isinstance(i, Prescription) and i.deleted_at is None]
+            target = next((r for r in reversed(rxs) if str(r.id) in str(statement)), rxs[-1] if rxs else None)
             return SimpleNamespace(
-                scalar_one_or_none=lambda: rxs[0] if rxs else None,
+                scalar_one_or_none=lambda: target,
                 scalars=lambda: SimpleNamespace(all=lambda: rxs),
             )
 

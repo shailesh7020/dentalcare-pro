@@ -29,12 +29,12 @@ from app.models.identity import Clinic
 from app.models.odontogram import Tooth
 from app.models.prescription import Prescription
 from app.models.treatment import Treatment
+from app.repositories.odontogram_repository import OdontogramRepository
 from app.repositories.patient_repository import PatientRepository
 from app.schemas.patient import DuplicateWarning, PatientInput, PatientUpdate
 from app.schemas.patient_report import (
     PatientReportGenerateRequest,
     PatientReportResponse,
-    PatientReportSectionEnum,
     PatientReportShareRequest,
 )
 from app.services.notifications.providers.email import EmailNotificationProvider
@@ -133,8 +133,8 @@ class PatientService:
 
     async def _generate_patient_number(self) -> str:
         from sqlalchemy import func
-        clinic = await self.db.get(Clinic, self.clinic_id)
-        prefix = "PAT"
+        clinic = await self.db.get(Clinic, self.clinic_id) if hasattr(self.db, "get") else None
+        prefix = "P"
         sep = "-"
         include_year = False
         padding = 5
@@ -157,19 +157,28 @@ class PatientService:
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
 
-        total_count = (
+        raw_count = (
             await self.db.scalar(
                 select(func.count()).select_from(Patient).where(Patient.clinic_id == self.clinic_id)
             )
-            or 0
+            if hasattr(self.db, "scalar")
+            else None
         )
+        try:
+            total_count = int(raw_count) if raw_count is not None else 0
+        except (TypeError, ValueError):
+            total_count = 0
         seq = max(start_num, total_count + start_num)
         seq_str = str(seq).zfill(padding)
         year_part = f"{datetime.now(UTC).year}{sep}" if include_year else ""
         candidate = f"{prefix}{sep}{year_part}{seq_str}" if prefix else f"{year_part}{seq_str}"
 
-        existing = await self.db.scalar(
-            select(Patient.id).where(Patient.patient_number == candidate)
+        existing = (
+            await self.db.scalar(
+                select(Patient.id).where(Patient.patient_number == candidate)
+            )
+            if hasattr(self.db, "scalar")
+            else None
         )
         if existing:
             candidate = f"{candidate}-{uuid4().hex[:4].upper()}"
@@ -590,7 +599,7 @@ class PatientService:
             if tx.clinical_notes
         ]
 
-        # 6. Odontogram / Teeth
+        # 6. Odontogram / Anatomical Teeth Chart
         stmt_teeth = (
             select(Tooth)
             .options(selectinload(Tooth.surfaces))
@@ -602,31 +611,107 @@ class PatientService:
         )
         teeth_rows = await self.db.execute(stmt_teeth)
         teeth = list(teeth_rows.scalars().all())
+
+        # If teeth not yet initialized for this patient, initialize standard adult catalog
+        if not teeth:
+            odontogram_repo = OdontogramRepository(self.db)
+            teeth = await odontogram_repo.get_or_initialize_odontogram(
+                self.clinic_id, patient_id, dentition_type="ADULT", user_id=self.actor.id
+            )
+
         teeth_dict: dict[str, Any] = {}
         active_caries = 0
         missing_count = 0
         rct_count = 0
         crown_count = 0
         implant_count = 0
+        restoration_count = 0
+        healthy_count = 0
+        notable_teeth: list[dict[str, Any]] = []
+
         for t in teeth:
+            tooth_status = str(t.primary_status or "HEALTHY").upper()
+            surfaces_summary = ""
+            if t.surfaces:
+                affected = [
+                    s.surface for s in t.surfaces
+                    if str(s.condition).upper() != "HEALTHY" or (s.treatment and s.treatment != "NONE")
+                ]
+                if affected:
+                    surfaces_summary = ", ".join(affected)
+
             teeth_dict[str(t.tooth_number)] = {
+                "tooth_number": t.tooth_number,
+                "name": t.name,
+                "arch": t.arch,
+                "tooth_type": t.tooth_type,
                 "primary_status": t.primary_status,
                 "color": t.color,
-                "is_missing": t.is_missing,
+                "is_missing": t.is_missing or t.is_extracted,
                 "has_crown": t.has_crown,
                 "has_root_canal": t.has_root_canal,
                 "has_implant": t.has_implant,
+                "surfaces": surfaces_summary,
+                "notes": t.notes,
             }
-            if t.is_missing:
+
+            if t.is_missing or t.is_extracted or tooth_status in ("MISSING", "EXTRACTION"):
                 missing_count += 1
-            if t.has_crown:
+                notable_teeth.append({
+                    "tooth_number": t.tooth_number,
+                    "name": t.name,
+                    "condition": "Missing / Extracted",
+                    "details": "Tooth absent or extracted",
+                })
+            elif t.has_crown or tooth_status in ("CROWN", "TEMPORARY_CROWN"):
                 crown_count += 1
-            if t.has_root_canal:
+                notable_teeth.append({
+                    "tooth_number": t.tooth_number,
+                    "name": t.name,
+                    "condition": "Prosthetic Crown / Cap",
+                    "details": surfaces_summary or "Full coverage restoration",
+                })
+            elif t.has_root_canal or tooth_status == "ROOT_CANAL":
                 rct_count += 1
-            if t.has_implant:
+                notable_teeth.append({
+                    "tooth_number": t.tooth_number,
+                    "name": t.name,
+                    "condition": "Root Canal Treated (RCT)",
+                    "details": "Endodontic therapy",
+                })
+            elif t.has_implant or tooth_status == "IMPLANT":
                 implant_count += 1
-            if t.primary_status == "CARIES":
+                notable_teeth.append({
+                    "tooth_number": t.tooth_number,
+                    "name": t.name,
+                    "condition": "Dental Implant",
+                    "details": "Osseointegrated titanium implant",
+                })
+            elif tooth_status in ("CARIES", "CAVITY"):
                 active_caries += 1
+                notable_teeth.append({
+                    "tooth_number": t.tooth_number,
+                    "name": t.name,
+                    "condition": "Dental Caries / Cavity",
+                    "details": f"Surfaces: {surfaces_summary}" if surfaces_summary else "Active decay",
+                })
+            elif tooth_status in ("FILLING", "RESTORATION", "TEMPORARY_FILLING"):
+                restoration_count += 1
+                notable_teeth.append({
+                    "tooth_number": t.tooth_number,
+                    "name": t.name,
+                    "condition": "Restoration / Filling",
+                    "details": f"Surfaces: {surfaces_summary}" if surfaces_summary else "Restored tooth",
+                })
+            elif tooth_status not in ("HEALTHY", "NORMAL"):
+                notable_teeth.append({
+                    "tooth_number": t.tooth_number,
+                    "name": t.name,
+                    "condition": tooth_status.replace("_", " ").title(),
+                    "details": surfaces_summary or (t.notes or "Clinical finding"),
+                })
+            else:
+                healthy_count += 1
 
         patient_data["teeth"] = teeth_dict
         patient_data["odontogram_stats"] = {
@@ -635,7 +720,11 @@ class PatientService:
             "root_canals": rct_count,
             "crowns": crown_count,
             "implants": implant_count,
+            "restorations": restoration_count,
+            "healthy_teeth": healthy_count,
+            "total_teeth_charted": len(teeth),
         }
+        patient_data["notable_teeth"] = notable_teeth
 
         # 7. Prescriptions
         stmt_rx = (
@@ -865,34 +954,105 @@ class PatientService:
             f"?report_number={report_number}&token={share_token}"
         )
 
-        section_titles = {
-            PatientReportSectionEnum.MEDICAL_HISTORY: "Medical History",
-            PatientReportSectionEnum.TREATMENT_HISTORY: "Treatment Summary",
-            PatientReportSectionEnum.ODONTOGRAM: "Odontogram",
-            PatientReportSectionEnum.PRESCRIPTIONS: "Prescription",
-            PatientReportSectionEnum.RECEIPTS: "Payment Receipt",
-            PatientReportSectionEnum.INVOICES: "Invoice Summary",
-            PatientReportSectionEnum.NEXT_APPOINTMENT: "Next Appointment",
-            PatientReportSectionEnum.CLINICAL_NOTES: "Clinical Notes",
-        }
-        included_bullets = [
-            f"• {section_titles[s]}"
-            for s in payload.sections
-            if s in section_titles
-        ]
-        bullet_text = (
-            "\n".join(included_bullets)
-            if included_bullets
-            else "• Complete Dental Records"
-        )
 
-        raw_msg = (
-            f"Hello {patient.first_name} {patient.last_name},\n\n"
-            f"Please find your DentalCare Pro treatment summary attached.\n\n"
-            f"Included:\n{bullet_text}\n\n"
-            f"If you have any questions please contact the clinic.\n\n"
-            f"Thank you,\n{clinic_info['name']}"
-        )
+        # Build Anatomical Odontogram Summary for WhatsApp
+        stats = patient_data.get("odontogram_stats", {})
+        healthy_teeth = stats.get("healthy_teeth", 32)
+        total_charted = stats.get("total_teeth_charted", 32)
+        caries_count = stats.get("active_caries", 0)
+        rct_count = stats.get("root_canals", 0)
+        crown_count = stats.get("crowns", 0)
+        implant_count = stats.get("implants", 0)
+        filling_count = stats.get("restorations", 0)
+        missing_count = stats.get("missing_teeth", 0)
+        notable_teeth = patient_data.get("notable_teeth", [])
+
+        overview_items = []
+        if caries_count > 0:
+            overview_items.append(f"{caries_count} Caries/Decay")
+        if rct_count > 0:
+            overview_items.append(f"{rct_count} Root Canal (RCT)")
+        if crown_count > 0:
+            overview_items.append(f"{crown_count} Crowns/Caps")
+        if filling_count > 0:
+            overview_items.append(f"{filling_count} Fillings")
+        if implant_count > 0:
+            overview_items.append(f"{implant_count} Implants")
+        if missing_count > 0:
+            overview_items.append(f"{missing_count} Missing")
+
+        odont_lines = [
+            "🦷 *ODONTOGRAM DENTAL CHART (ANATOMICAL TEETH STATUS)*",
+            f"• Charted Arches: Upper & Lower Jaws ({total_charted} Teeth)",
+            f"• Overview: {healthy_teeth} Sound/Healthy" + (f" | {', '.join(overview_items)}" if overview_items else " (All teeth sound)"),
+        ]
+
+        if notable_teeth:
+            odont_lines.append("• *Specific Teeth Diagnoses & Findings:*")
+            for nt in notable_teeth[:8]:
+                odont_lines.append(
+                    f"   ▶ Tooth #{nt['tooth_number']} ({nt['name']}): *{nt['condition']}* ({nt['details']})"
+                )
+            if len(notable_teeth) > 8:
+                odont_lines.append(f"   ▶ ...and {len(notable_teeth) - 8} more charted teeth.")
+
+        today_str = datetime.now(UTC).strftime("%d-%b-%Y")
+        patient_full_name = f"{patient.first_name} {patient.last_name}".strip()
+
+        msg_blocks = [
+            f"🏥 *{clinic_info['name'].upper()}*",
+            "📄 *OFFICIAL CLINICAL REPORT & DENTAL RECORD*",
+            f"👤 Patient: *{patient_full_name}* (ID: #{patient.patient_number})",
+            f"📅 Date: {today_str}",
+            "",
+            "\n".join(odont_lines),
+        ]
+
+        # Latest Treatment
+        tx_list = patient_data.get("treatments") or []
+        if tx_list:
+            top_tx = tx_list[0]
+            desc = top_tx.get("diagnosis") or top_tx.get("procedure_performed") or "Clinical Treatment"
+            tx_dt = top_tx.get("date") or today_str
+            msg_blocks.extend([
+                "",
+                "📋 *LATEST TREATMENT:*",
+                f"• {desc} ({tx_dt})",
+            ])
+
+        # Prescriptions
+        rx_list = patient_data.get("prescriptions") or []
+        if rx_list and rx_list[0].get("medications"):
+            med_strs = [
+                f"{m.get('medicine_name')} ({m.get('dosage')})"
+                for m in rx_list[0]["medications"][:3]
+            ]
+            msg_blocks.extend([
+                "",
+                "💊 *ACTIVE MEDICATIONS:*",
+                f"• {'; '.join(med_strs)}",
+            ])
+
+        # Next Appointment
+        next_app = patient_data.get("next_appointment")
+        if next_app:
+            msg_blocks.extend([
+                "",
+                "📅 *NEXT APPOINTMENT / FOLLOW-UP:*",
+                f"• {next_app.get('date')} at {next_app.get('time')} with {next_app.get('dentist_name')}",
+            ])
+
+        # Direct Web Link to Interactive Report
+        msg_blocks.extend([
+            "",
+            "🌐 *View Full Interactive Anatomical Chart & Official PDF:*",
+            f"http://localhost:3000/patients/{patient.id}/report",
+            "",
+            f"For questions or tooth care guidance, please contact {clinic_info['name']}.",
+            f"📞 Phone: {clinic_info.get('phone') or 'Clinic Reception'}",
+        ])
+
+        raw_msg = "\n".join(msg_blocks)
         encoded_msg = urllib.parse.quote(raw_msg)
         phone = (
             (patient.mobile_number or "")
@@ -955,6 +1115,7 @@ class PatientService:
                     )
                     pdf_bytes = None
 
+            meta: PatientReportResponse | None = None
             if not pdf_bytes:
                 pdf_bytes, meta = await self.generate_patient_report(
                     patient_id=patient_id,
@@ -964,20 +1125,16 @@ class PatientService:
                 file_name = meta.file_name
 
             caption = (
-                f"Hello {patient.first_name} {patient.last_name},\n\n"
-                f"Please find your DentalCare Pro treatment summary attached.\n\n"
-                f"Included:\n"
-                f"• Medical History\n"
-                f"• Treatment Summary\n"
-                f"• Odontogram\n"
-                f"• Clinical Notes\n"
-                f"• Prescription\n"
-                f"• Payment Receipt\n"
-                f"• Invoice Summary\n"
-                f"• Next Appointment\n\n"
-                f"If you have any questions please contact the clinic.\n\n"
-                f"Thank you,\n{clinic_name}"
+                payload.notes
+                or (meta.whatsapp_message if meta and meta.whatsapp_message else None)
             )
+            if not caption:
+                _, gen_meta = await self.generate_patient_report(
+                    patient_id=patient_id,
+                    payload=PatientReportGenerateRequest(save_to_documents=False),
+                    storage_service=None,
+                )
+                caption = gen_meta.whatsapp_message
 
             wa_res = await WhatsAppNotificationProvider.send_document(
                 recipient=payload.recipient,
@@ -986,6 +1143,13 @@ class PatientService:
                 pdf_bytes=pdf_bytes,
             )
             if not wa_res.get("success"):
+                phone_clean = re.sub(r"\D", "", str(payload.recipient or patient.mobile_number or ""))
+                wa_res["whatsapp_url"] = (
+                    f"https://wa.me/{phone_clean}?text={urllib.parse.quote(caption)}"
+                    if phone_clean
+                    else f"https://wa.me/?text={urllib.parse.quote(caption)}"
+                )
+                wa_res["caption"] = caption
                 return wa_res
 
         # Record Audit
