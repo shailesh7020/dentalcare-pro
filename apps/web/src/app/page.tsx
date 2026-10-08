@@ -362,7 +362,7 @@ export default function HomePage() {
                       </div>
 
                       {/* Status Badge & Action */}
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <Badge
                           variant={
                             appointment.state === "Confirmed"
@@ -375,6 +375,14 @@ export default function HomePage() {
                         >
                           {appointment.state}
                         </Badge>
+                        <Link
+                          href="/treatments"
+                          className="px-2 py-1 text-[11px] font-semibold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 dark:text-teal-300 rounded-md transition-colors inline-flex items-center gap-1"
+                          title="Open Treatments & Clinical Reports"
+                        >
+                          <Stethoscope className="w-3 h-3" />
+                          <span>Chart</span>
+                        </Link>
                         <Link
                           href="/appointments"
                           className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
@@ -426,6 +434,21 @@ export default function HomePage() {
                     </span>
                     <span className="text-[10px] text-slate-400 mt-0.5">
                       Chair & doctor
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="/treatments"
+                    className="flex flex-col items-start p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-teal-50 dark:hover:bg-teal-950/40 border border-slate-200/80 dark:border-slate-700 transition-colors group text-left"
+                  >
+                    <span className="p-2 rounded-lg bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 mb-2 group-hover:scale-105 transition-transform">
+                      <Stethoscope className="w-4 h-4" />
+                    </span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      Treatments
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">
+                      Chart & Reports
                     </span>
                   </Link>
 

@@ -346,12 +346,19 @@ export default function TreatmentsDirectoryPage() {
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-2">
+                        <div className="inline-flex items-center gap-1.5">
                           <Link
                             href={`/treatments/${t.id}`}
                             className="px-2.5 py-1 text-xs font-semibold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 rounded transition-colors"
                           >
                             View
+                          </Link>
+                          <Link
+                            href={`/patients/${t.patient_id}/report`}
+                            className="px-2.5 py-1 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded transition-colors inline-flex items-center gap-1 shadow-2xs"
+                            title="View/Print Full Patient Clinical Report"
+                          >
+                            <FileText size={11} /> Report
                           </Link>
                           {t.status !== "COMPLETED" && (
                             <Link
