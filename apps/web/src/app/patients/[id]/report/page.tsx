@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useRef, useState } from "react";
+import { Suspense, use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -153,12 +154,9 @@ interface AppointmentItem {
   } | null;
 }
 
-export default function SinglePagePatientReport({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+function SinglePagePatientReportContent({ id }: { id: string }) {
+  const searchParams = useSearchParams();
+  const autoPrint = searchParams.get("autoPrint") === "true";
   const [downloading, setDownloading] = useState(false);
   const [sharingWa, setSharingWa] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
@@ -223,6 +221,16 @@ export default function SinglePagePatientReport({
   const upcomingAppointment = appointments.find(
     (a) => a.date >= nowStr && a.status !== "CANCELLED"
   );
+
+  // Auto-print effect when navigated with ?autoPrint=true
+  useEffect(() => {
+    if (autoPrint && patient && !patientQuery.isLoading && !treatmentsQuery.isLoading) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPrint, patient, patientQuery.isLoading, treatmentsQuery.isLoading]);
 
   // Compile Medical Alert Tags
   const alerts: { text: string; severity: "critical" | "warning" | "info" }[] = [];
@@ -614,8 +622,22 @@ export default function SinglePagePatientReport({
                             year: "numeric",
                           })}
                         </td>
-                        <td className="py-2 px-3 font-semibold text-slate-900">
-                          {tx.procedure_performed || tx.diagnosis || "Dental Procedure"}
+                        <td className="py-2 px-3">
+                          <div className="font-semibold text-slate-900">
+                            {tx.diagnosis || tx.procedure_performed || "Dental Procedure"}
+                          </div>
+                          {tx.procedures && tx.procedures.length > 0 && (
+                            <div className="text-[11px] text-teal-800 font-medium mt-0.5">
+                              {tx.procedures
+                                .map((p) => `${p.procedure_name}${p.tooth_number ? ` (#${p.tooth_number})` : ""}`)
+                                .join(", ")}
+                            </div>
+                          )}
+                          {!tx.procedures?.length && tx.procedure_performed && tx.diagnosis && (
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              {tx.procedure_performed}
+                            </div>
+                          )}
                         </td>
                         <td className="py-2 px-3 font-mono font-medium text-slate-600">
                           {tx.procedures && tx.procedures.length > 0
@@ -761,5 +783,25 @@ export default function SinglePagePatientReport({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SinglePagePatientReport({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-sm text-slate-500">
+          Loading Clinical Report...
+        </div>
+      }
+    >
+      <SinglePagePatientReportContent id={id} />
+    </Suspense>
   );
 }

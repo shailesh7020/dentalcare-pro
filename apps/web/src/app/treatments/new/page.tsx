@@ -12,11 +12,14 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  FileCheck,
+  FileText,
   HeartPulse,
   Info,
   Layers,
   Pill,
   Plus,
+  Printer,
   RotateCcw,
   Save,
   Stethoscope,
@@ -231,17 +234,38 @@ function TreatmentNewForm() {
 
   // Submission mutation
   const createMutation = useMutation({
-    mutationFn: async (payload: TreatmentCreateInput) => {
+    mutationFn: async ({
+      payload,
+      andGenerateReport,
+    }: {
+      payload: TreatmentCreateInput;
+      andGenerateReport?: boolean;
+    }) => {
       setFormError(null);
       const res = await api.post<TreatmentDetail>("/treatments", payload);
-      return res.data;
+      let finalTreatment = res.data;
+      if (andGenerateReport) {
+        try {
+          const compRes = await api.post(`/treatments/${finalTreatment.id}/complete`, {
+            complete_appointment: true,
+          });
+          finalTreatment = compRes.data;
+        } catch {
+          // If already completed or error, continue
+        }
+      }
+      return { data: finalTreatment, andGenerateReport };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ data, andGenerateReport }) => {
       void queryClient.invalidateQueries({ queryKey: ["treatments-list"] });
       void queryClient.invalidateQueries({ queryKey: ["treatment-dashboard-stats"] });
       void queryClient.invalidateQueries({ queryKey: ["patient-timeline", patientId] });
       void queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      router.push(`/treatments/${data.id}`);
+      if (andGenerateReport) {
+        router.push(`/patients/${data.patient_id}/report?autoPrint=true`);
+      } else {
+        router.push(`/treatments/${data.id}`);
+      }
     },
     onError: (err: any) => {
       const data = err.response?.data;
@@ -263,7 +287,7 @@ function TreatmentNewForm() {
 
   const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent, andGenerateReport = false) => {
     e.preventDefault();
     setFormError(null);
 
@@ -323,9 +347,9 @@ function TreatmentNewForm() {
     }
 
     const payload: TreatmentCreateInput = {
-      patient_id: patientId.trim(),
-      appointment_id: appointmentId.trim(),
-      dentist_id: dentistId.trim(),
+      patient_id: cleanPatientId,
+      appointment_id: cleanAppointmentId,
+      dentist_id: cleanDentistId,
       diagnosis: diagnosis.trim(),
       chief_complaint: chiefComplaint.trim() || undefined,
       clinical_findings: clinicalFindings.trim() || undefined,
@@ -341,13 +365,17 @@ function TreatmentNewForm() {
         plan: soapPlan.trim() || undefined,
       },
       follow_up_instructions: followUpInstructions.trim() || undefined,
-      status,
+      status: andGenerateReport ? "COMPLETED" : status,
       is_override: isOverride,
       procedures: validProcedures,
       follow_up: followUpPayload,
     };
 
-    createMutation.mutate(payload);
+    createMutation.mutate({ payload, andGenerateReport });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    handleFormSubmit(e, false);
   };
 
   // Extract medical alerts
@@ -993,20 +1021,30 @@ function TreatmentNewForm() {
           </div>
 
           {/* Form Actions Footer */}
-          <div className="flex items-center justify-end gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
             <Link
               href="/treatments"
-              className="px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-md border border-slate-200 transition-colors"
+              className="px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-md border border-slate-200 transition-colors text-center"
             >
               Cancel
             </Link>
             <button
-              type="submit"
+              type="button"
+              onClick={(e) => handleFormSubmit(e, false)}
               disabled={createMutation.isPending}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs rounded-md shadow-sm disabled:opacity-50 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-md shadow-2xs disabled:opacity-50 transition-colors cursor-pointer"
             >
               <Save size={14} />
-              {createMutation.isPending ? "Creating Treatment..." : "Save & Open Treatment Record"}
+              {createMutation.isPending ? "Saving..." : "Save Record Only"}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => handleFormSubmit(e, true)}
+              disabled={createMutation.isPending}
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-md shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              <FileCheck size={14} />
+              {createMutation.isPending ? "Generating Report..." : "Save & Generate Patient Report"}
             </button>
           </div>
         </form>
