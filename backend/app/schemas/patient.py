@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.models.patient import BloodGroup, Gender
 
@@ -55,7 +55,7 @@ class PatientInput(BaseModel):
     marital_status: str | None = Field(default=None, max_length=40)
     occupation: str | None = Field(default=None, max_length=100)
     aadhaar_number: str | None = Field(default=None, pattern=r"^\d{12}$")
-    email: EmailStr | None = None
+    email: str | None = None
     mobile_number: str = Field(pattern=MOBILE_PATTERN)
     alternate_mobile: str | None = Field(default=None, pattern=MOBILE_PATTERN)
     address: str | None = None
@@ -97,7 +97,7 @@ class PatientUpdate(BaseModel):
     marital_status: str | None = Field(default=None, max_length=40)
     occupation: str | None = Field(default=None, max_length=100)
     aadhaar_number: str | None = Field(default=None, pattern=r"^\d{12}$")
-    email: EmailStr | None = None
+    email: str | None = None
     mobile_number: str | None = Field(default=None, pattern=MOBILE_PATTERN)
     alternate_mobile: str | None = Field(default=None, pattern=MOBILE_PATTERN)
     address: str | None = None
@@ -140,7 +140,7 @@ class PatientRead(BaseModel):
     date_of_birth: date
     age: int
     mobile_number: str
-    email: EmailStr | None
+    email: str | None = None
     city: str | None
     blood_group: BloodGroup | None
     photo_url: str | None
