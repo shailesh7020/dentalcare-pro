@@ -61,6 +61,8 @@ interface TreatmentOption {
   id: string;
   treatment_number: string;
   diagnosis: string;
+  patient_id?: string;
+  dentist_id?: string;
   procedures: TreatmentProcedureOption[];
 }
 
@@ -180,8 +182,27 @@ function InvoiceComposerContent() {
     enabled: !!treatmentId,
   });
 
+  // When treatment loads, auto-select patient and dentist
+  useEffect(() => {
+    if (treatmentQuery.data) {
+      if (treatmentQuery.data.patient_id && !patientId) {
+        setPatientId(treatmentQuery.data.patient_id);
+      }
+      if (treatmentQuery.data.dentist_id && !dentistId) {
+        setDentistId(treatmentQuery.data.dentist_id);
+      }
+    }
+  }, [treatmentQuery.data, patientId, dentistId]);
+
   // If treatment query resolves, auto-populate line items if only default consultation is present
   const handleLoadTreatmentProcedures = (trt: TreatmentOption) => {
+    if (trt.patient_id) {
+      setPatientId(trt.patient_id);
+    }
+    if (trt.dentist_id) {
+      setDentistId(trt.dentist_id);
+    }
+
     const newItems: InvoiceItemCreate[] = [
       {
         item_type: "CONSULTATION",

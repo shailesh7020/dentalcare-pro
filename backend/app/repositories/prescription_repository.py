@@ -20,7 +20,6 @@ from app.models.prescription import (
     PrescriptionTemplate,
     TemplateCategory,
 )
-from app.models.treatment import Treatment
 from app.schemas.prescription import (
     MedicineCatalogCreate,
     PrescriptionCreate,
@@ -549,26 +548,13 @@ class PrescriptionRepository:
         return f"{prefix}-{count + 1:04d}"
 
     async def get_by_id(self, clinic_id: UUID, prescription_id: UUID) -> Prescription | None:
-        rx = await self.db.get(Prescription, prescription_id)
-        if rx and rx.clinic_id == clinic_id and rx.deleted_at is None:
-            if not getattr(rx, "patient", None) and getattr(rx, "patient_id", None):
-                rx.patient = await self.db.get(Patient, rx.patient_id)
-            if not getattr(rx, "dentist", None) and getattr(rx, "dentist_id", None):
-                rx.dentist = await self.db.get(User, rx.dentist_id)
-            if not getattr(rx, "treatment", None) and getattr(rx, "treatment_id", None):
-                rx.treatment = await self.db.get(Treatment, rx.treatment_id)
-            return rx
-        query = self._base_query(clinic_id).where(Prescription.id == prescription_id)
+        query = (
+            self._base_query(clinic_id)
+            .where(Prescription.id == prescription_id)
+            .execution_options(populate_existing=True)
+        )
         res = await self.db.execute(query)
-        rx = res.scalar_one_or_none()
-        if rx:
-            if not getattr(rx, "patient", None) and getattr(rx, "patient_id", None):
-                rx.patient = await self.db.get(Patient, rx.patient_id)
-            if not getattr(rx, "dentist", None) and getattr(rx, "dentist_id", None):
-                rx.dentist = await self.db.get(User, rx.dentist_id)
-            if not getattr(rx, "treatment", None) and getattr(rx, "treatment_id", None):
-                rx.treatment = await self.db.get(Treatment, rx.treatment_id)
-        return rx
+        return res.scalar_one_or_none()
 
     async def get_by_number(self, clinic_id: UUID, rx_number: str) -> Prescription | None:
         query = self._base_query(clinic_id).where(

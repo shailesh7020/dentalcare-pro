@@ -673,7 +673,7 @@ function PrescriptionWizardContent() {
           <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-3 text-rose-800 text-xs">
             <AlertCircle size={17} className="text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold">Validation Error</p>
+              <p className="font-bold">Prescription Error</p>
               <p className="mt-0.5">{errorMessage}</p>
             </div>
           </div>
